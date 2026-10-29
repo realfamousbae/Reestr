@@ -1,4 +1,4 @@
-# The Android app (D38): an APK for arm64 phones, signed with the family's release key.
+# The Android app (D38): an APK for arm64 phones, signed with the project's release key.
 # Like the Windows build it runs only by hand (Actions → Android build → Run workflow) and on
 # version tags (D36). Every run uploads the APK as a workflow artifact. A `v*` tag, or a manual
 # run with «release» filled in, also attaches it to the GitHub release of that tag.
