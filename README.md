@@ -21,6 +21,7 @@ ui/             React + TypeScript UI (Vite), the month grid on Glide Data Grid
 tools/fixtures  generator of the synthetic workbook used by the import tests
 docs/           reference workbook, backlog, CI budget
 site/           the user manual (Astro Starlight, Russian)
+landing/        the landing page with the download buttons (static HTML, Caddy on Railway)
 ```
 
 ## Development
@@ -48,6 +49,11 @@ click **Подробнее** → **Выполнить в любом случае
 on Railway at https://reestr-docs.up.railway.app from the `dev` branch (`site/Dockerfile`):
 `pnpm site:dev` serves it at `http://localhost:4321`, `pnpm site:build` writes `site/dist/`.
 `USER_GUIDE.md` points to its pages.
+
+The landing page (https://reestr.up.railway.app) is plain HTML in `landing/`, served by Caddy
+on Railway from the `dev` branch (`landing/Dockerfile`); no build step and no requests to other
+hosts. Its download links name the release files, so **every release updates the version in
+`landing/index.html`** (search for the previous one, e.g. `0.2.1`).
 Screenshots in `site/src/assets/screens/` are taken from a demo file with fictional data:
 `cargo run -p reestr-storage --example demo_file -- <path>/Семья.reestr` (password `demo-reestr`).
 
