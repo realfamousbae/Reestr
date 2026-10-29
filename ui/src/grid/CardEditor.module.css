@@ -1,0 +1,86 @@
+.editor {
+  display: flex;
+  flex-direction: column;
+  min-width: 260px;
+}
+
+.input {
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--grid-font-size);
+}
+
+.list {
+  margin: var(--s1) calc(-1 * var(--s2)) 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--ruling);
+}
+
+.list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "card rate"
+    "detail detail";
+  column-gap: var(--s2);
+  padding: var(--s1) var(--s2);
+  cursor: pointer;
+}
+
+.list li:hover,
+.list li[aria-selected="true"] {
+  background: var(--accent-wash);
+}
+
+.card {
+  grid-area: card;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rate {
+  grid-area: rate;
+  font-weight: 700;
+}
+
+.detail {
+  grid-area: detail;
+  color: var(--ink-muted);
+  font-size: var(--text-s);
+}
+
+.detail:empty {
+  display: none;
+}
+
+/* A used-up limit: last and grey (PLAN §6.4). */
+.exhausted .card,
+.exhausted .rate,
+.exhausted .detail {
+  color: var(--ink-faint);
+  font-weight: 400;
+}
+
+.note {
+  margin: var(--s1) 0 var(--s1);
+  color: var(--ink-faint);
+  font-size: var(--text-s);
+}
+
+/* A plain list of names (the categories), scrolled when long. */
+.scroll {
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.list li.plain {
+  display: block;
+}

@@ -1,0 +1,36 @@
+[package]
+name = "reestr-app"
+description = "Reestr desktop app: Tauri commands between the UI and core/storage"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+name = "reestr_app"
+# Android loads the app as a shared library (D38).
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.7", features = [] }
+
+[dependencies]
+reestr-core.workspace = true
+reestr-storage.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tauri = { version = "2.12", features = [] }
+# Native open/save file dialogs for choosing the .reestr file.
+tauri-plugin-dialog = "2.8"
+# The phone's exchange files on Yandex Disk, picked once and kept (D39).
+tauri-plugin-reestr-files.workspace = true
+# The user's today for product deadlines (already used by core and storage).
+time.workspace = true
+zeroize.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

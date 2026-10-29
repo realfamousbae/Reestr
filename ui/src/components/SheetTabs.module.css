@@ -1,0 +1,67 @@
+.strip {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.tabs {
+  display: flex;
+  overflow-x: auto;
+}
+
+.tab {
+  padding: var(--s1) var(--s4);
+  border: 1px solid var(--ruling);
+  border-top: none;
+  margin-left: -1px;
+  background: var(--band-strong);
+  color: var(--ink-muted);
+  cursor: pointer;
+  font-size: var(--text-m);
+  white-space: nowrap;
+}
+
+.tab:hover {
+  color: var(--ink);
+}
+
+/* The active sheet is white and joined to the grid, as in Excel. */
+.tab[aria-selected="true"] {
+  background: var(--sheet);
+  color: var(--ink);
+  font-weight: 700;
+  border-bottom: 3px solid var(--accent);
+}
+
+.add {
+  width: 36px;
+  border: none;
+  background: transparent;
+  color: var(--ink-muted);
+  font-size: var(--text-l);
+  cursor: pointer;
+}
+
+.add:hover {
+  color: var(--accent);
+}
+
+/* «Справочники» stands apart from the months, like the source «Служебный» sheet. */
+.service {
+  margin-left: var(--s4);
+  border-left: 1px solid var(--ruling);
+}
+
+/* Urgent deadlines: the only colored tab mark (PLAN §7). */
+.badge {
+  display: inline-block;
+  min-width: 1.4em;
+  margin-left: var(--s1);
+  padding: 0 var(--s1);
+  border-radius: 999px;
+  background: var(--warn-bg);
+  color: var(--warn);
+  font-size: var(--text-s);
+  font-weight: 700;
+  text-align: center;
+}

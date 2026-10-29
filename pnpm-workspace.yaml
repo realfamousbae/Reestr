@@ -1,0 +1,6 @@
+packages:
+  - ui
+  - site
+
+patchedDependencies:
+  '@glideapps/glide-data-grid@6.0.3': patches/@glideapps__glide-data-grid@6.0.3.patch

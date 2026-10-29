@@ -1,0 +1,22 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--ink-muted);
+  font-size: var(--text-s);
+}
+
+.field input {
+  padding: var(--s1) var(--s2);
+  border: 1px solid var(--ruling-strong);
+  border-radius: var(--radius);
+  background: var(--sheet);
+  color: var(--ink);
+  font-size: var(--text-m);
+  text-align: right;
+}
+
+.field input:focus {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}

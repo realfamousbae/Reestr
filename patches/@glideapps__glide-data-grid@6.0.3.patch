@@ -1,0 +1,114 @@
+diff --git a/dist/cjs/data-editor/data-editor.js b/dist/cjs/data-editor/data-editor.js
+index 081f3b38d82107204ac3f3620d6724ffad01b43f..0a19d28e72804a6e5e67b3456e745d680218f407 100644
+--- a/dist/cjs/data-editor/data-editor.js
++++ b/dist/cjs/data-editor/data-editor.js
+@@ -2121,7 +2121,7 @@ const DataEditorImpl = (p, forwardedRef) => {
+             !event.ctrlKey &&
+             gridSelection.current !== undefined &&
+             event.key.length === 1 &&
+-            /[ -~]/g.test(event.key) &&
++            /[ -~]|[\p{L}\p{M}\p{N}\p{S}\p{P}]/u.test(event.key) &&
+             event.bounds !== undefined &&
+             (0, data_grid_types_js_1.isReadWriteCell)(getCellContent([col - rowMarkerOffset, Math.max(0, Math.min(row, rows - 1))]))) {
+             if ((!showTrailingBlankRow || row !== rows) &&
+diff --git a/dist/cjs/internal/data-grid-search/data-grid-search.js b/dist/cjs/internal/data-grid-search/data-grid-search.js
+index afb6c66147f1b283fe9bb0ca4d20706731900394..97dd50949d2e58c181970a3ee7b9aed5dd06b4fe 100644
+--- a/dist/cjs/internal/data-grid-search/data-grid-search.js
++++ b/dist/cjs/internal/data-grid-search/data-grid-search.js
+@@ -258,12 +258,15 @@ const DataGridSearch = p => {
+         }
+         let resultString;
+         if (searchStatus !== undefined) {
+-            resultString =
+-                searchStatus.results >= 1000
+-                    ? `over 1000`
+-                    : `${searchStatus.results} result${searchStatus.results !== 1 ? "s" : ""}`;
++            const n = searchStatus.results;
++            const word = n % 10 === 1 && n % 100 !== 11
++                ? "совпадение"
++                : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14)
++                    ? "совпадения"
++                    : "совпадений";
++            resultString = n >= 1000 ? `больше 1000 совпадений` : `${n} ${word}`;
+             if (searchStatus.selectedIndex >= 0) {
+-                resultString = `${searchStatus.selectedIndex + 1} of ${resultString}`;
++                resultString = `${searchStatus.selectedIndex + 1} из ${n >= 1000 ? "больше 1000" : n}`;
+             }
+         }
+         const cancelEvent = (ev) => {
+@@ -276,14 +279,14 @@ const DataGridSearch = p => {
+         return (React.createElement(data_grid_search_style_js_1.SearchWrapper, { className: showSearch ? "" : "out", onMouseDown: cancelEvent, onMouseMove: cancelEvent, onMouseUp: cancelEvent, onClick: cancelEvent },
+             React.createElement("div", { className: "gdg-search-bar-inner" },
+                 React.createElement("input", { id: searchID, "aria-hidden": !showSearch, "data-testid": "search-input", ref: searchInputRef, onChange: onSearchChange, value: searchString, tabIndex: showSearch ? undefined : -1, onKeyDownCapture: onSearchKeyDown }),
+-                React.createElement("button", { "aria-label": "Previous Result", "aria-hidden": !showSearch, tabIndex: showSearch ? undefined : -1, onClick: onPrev, disabled: (searchStatus?.results ?? 0) === 0 }, upArrow),
+-                React.createElement("button", { "aria-label": "Next Result", "aria-hidden": !showSearch, tabIndex: showSearch ? undefined : -1, onClick: onNext, disabled: (searchStatus?.results ?? 0) === 0 }, downArrow),
+-                onSearchClose !== undefined && (React.createElement("button", { "aria-label": "Close Search", "aria-hidden": !showSearch, "data-testid": "search-close-button", tabIndex: showSearch ? undefined : -1, onClick: onClose }, closeX))),
++                React.createElement("button", { "aria-label": "Предыдущее совпадение", "aria-hidden": !showSearch, tabIndex: showSearch ? undefined : -1, onClick: onPrev, disabled: (searchStatus?.results ?? 0) === 0 }, upArrow),
++                React.createElement("button", { "aria-label": "Следующее совпадение", "aria-hidden": !showSearch, tabIndex: showSearch ? undefined : -1, onClick: onNext, disabled: (searchStatus?.results ?? 0) === 0 }, downArrow),
++                onSearchClose !== undefined && (React.createElement("button", { "aria-label": "Закрыть поиск", "aria-hidden": !showSearch, "data-testid": "search-close-button", tabIndex: showSearch ? undefined : -1, onClick: onClose }, closeX))),
+             searchStatus !== undefined ? (React.createElement(React.Fragment, null,
+                 React.createElement("div", { className: "gdg-search-status" },
+                     React.createElement("div", { "data-testid": "search-result-area" }, resultString)),
+                 React.createElement("div", { className: "gdg-search-progress", style: progressStyle }))) : (React.createElement("div", { className: "gdg-search-status" },
+-                React.createElement("label", { htmlFor: searchID }, "Type to search")))));
++                React.createElement("label", { htmlFor: searchID }, "Что найти: начните печатать")))));
+     }, [
+         showSearch,
+         isAnimatingOut,
+diff --git a/dist/esm/data-editor/data-editor.js b/dist/esm/data-editor/data-editor.js
+index ec05aa9866c70032fc5509ff557cb8c542e384ed..d2e36792bfde17c33534720a834714fa8870aee9 100644
+--- a/dist/esm/data-editor/data-editor.js
++++ b/dist/esm/data-editor/data-editor.js
+@@ -2092,7 +2092,7 @@ const DataEditorImpl = (p, forwardedRef) => {
+             !event.ctrlKey &&
+             gridSelection.current !== undefined &&
+             event.key.length === 1 &&
+-            /[ -~]/g.test(event.key) &&
++            /[ -~]|[\p{L}\p{M}\p{N}\p{S}\p{P}]/u.test(event.key) &&
+             event.bounds !== undefined &&
+             isReadWriteCell(getCellContent([col - rowMarkerOffset, Math.max(0, Math.min(row, rows - 1))]))) {
+             if ((!showTrailingBlankRow || row !== rows) &&
+diff --git a/dist/esm/internal/data-grid-search/data-grid-search.js b/dist/esm/internal/data-grid-search/data-grid-search.js
+index 19f920ffa8c0ac8d719bb5b47fe2907b610fdf97..4f40a06d35a66c4a2fcfceec94da4fbf2e421b19 100644
+--- a/dist/esm/internal/data-grid-search/data-grid-search.js
++++ b/dist/esm/internal/data-grid-search/data-grid-search.js
+@@ -230,12 +230,15 @@ const DataGridSearch = p => {
+         }
+         let resultString;
+         if (searchStatus !== undefined) {
+-            resultString =
+-                searchStatus.results >= 1000
+-                    ? `over 1000`
+-                    : `${searchStatus.results} result${searchStatus.results !== 1 ? "s" : ""}`;
++            const n = searchStatus.results;
++            const word = n % 10 === 1 && n % 100 !== 11
++                ? "совпадение"
++                : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14)
++                    ? "совпадения"
++                    : "совпадений";
++            resultString = n >= 1000 ? `больше 1000 совпадений` : `${n} ${word}`;
+             if (searchStatus.selectedIndex >= 0) {
+-                resultString = `${searchStatus.selectedIndex + 1} of ${resultString}`;
++                resultString = `${searchStatus.selectedIndex + 1} из ${n >= 1000 ? "больше 1000" : n}`;
+             }
+         }
+         const cancelEvent = (ev) => {
+@@ -248,14 +251,14 @@ const DataGridSearch = p => {
+         return (React.createElement(SearchWrapper, { className: showSearch ? "" : "out", onMouseDown: cancelEvent, onMouseMove: cancelEvent, onMouseUp: cancelEvent, onClick: cancelEvent },
+             React.createElement("div", { className: "gdg-search-bar-inner" },
+                 React.createElement("input", { id: searchID, "aria-hidden": !showSearch, "data-testid": "search-input", ref: searchInputRef, onChange: onSearchChange, value: searchString, tabIndex: showSearch ? undefined : -1, onKeyDownCapture: onSearchKeyDown }),
+-                React.createElement("button", { "aria-label": "Previous Result", "aria-hidden": !showSearch, tabIndex: showSearch ? undefined : -1, onClick: onPrev, disabled: (searchStatus?.results ?? 0) === 0 }, upArrow),
+-                React.createElement("button", { "aria-label": "Next Result", "aria-hidden": !showSearch, tabIndex: showSearch ? undefined : -1, onClick: onNext, disabled: (searchStatus?.results ?? 0) === 0 }, downArrow),
+-                onSearchClose !== undefined && (React.createElement("button", { "aria-label": "Close Search", "aria-hidden": !showSearch, "data-testid": "search-close-button", tabIndex: showSearch ? undefined : -1, onClick: onClose }, closeX))),
++                React.createElement("button", { "aria-label": "Предыдущее совпадение", "aria-hidden": !showSearch, tabIndex: showSearch ? undefined : -1, onClick: onPrev, disabled: (searchStatus?.results ?? 0) === 0 }, upArrow),
++                React.createElement("button", { "aria-label": "Следующее совпадение", "aria-hidden": !showSearch, tabIndex: showSearch ? undefined : -1, onClick: onNext, disabled: (searchStatus?.results ?? 0) === 0 }, downArrow),
++                onSearchClose !== undefined && (React.createElement("button", { "aria-label": "Закрыть поиск", "aria-hidden": !showSearch, "data-testid": "search-close-button", tabIndex: showSearch ? undefined : -1, onClick: onClose }, closeX))),
+             searchStatus !== undefined ? (React.createElement(React.Fragment, null,
+                 React.createElement("div", { className: "gdg-search-status" },
+                     React.createElement("div", { "data-testid": "search-result-area" }, resultString)),
+                 React.createElement("div", { className: "gdg-search-progress", style: progressStyle }))) : (React.createElement("div", { className: "gdg-search-status" },
+-                React.createElement("label", { htmlFor: searchID }, "Type to search")))));
++                React.createElement("label", { htmlFor: searchID }, "Что найти: начните печатать")))));
+     }, [
+         showSearch,
+         isAnimatingOut,

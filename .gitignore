@@ -1,0 +1,22 @@
+# Rust
+/target/
+
+# Node
+node_modules/
+ui/dist/
+*.tsbuildinfo
+
+# Tauri generated schemas; the Android project in gen/android is kept (D38)
+crates/app/gen/schemas/
+
+# Data files must never be committed
+*.reestr
+*.reestr-journal
+*.snapshots/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json

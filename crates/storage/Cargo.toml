@@ -1,0 +1,32 @@
+[package]
+name = "reestr-storage"
+description = "Reestr encrypted data file: SQLCipher, schema, migrations"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+reestr-core.workspace = true
+rusqlite = { workspace = true, features = ["bundled-sqlcipher", "cache"] }
+serde.workspace = true
+serde_json.workspace = true
+# A temporary copy of the file to check the current password before changing it (D33).
+tempfile.workspace = true
+thiserror.workspace = true
+time.workspace = true
+zeroize.workspace = true
+
+# PLAN D15: without OpenSSL on the machine `bundled-sqlcipher` does not build on Windows and
+# Android, so OpenSSL is compiled from source and linked statically there (D38).
+[target.'cfg(any(windows, target_os = "android"))'.dependencies]
+rusqlite = { workspace = true, features = ["bundled-sqlcipher-vendored-openssl"] }
+
+[dev-dependencies]
+# Reads the cached «Свод» of the fixture in the stage 3 acceptance test.
+calamine.workspace = true
+rusqlite.workspace = true
+
+[lints]
+workspace = true

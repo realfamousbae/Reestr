@@ -1,0 +1,70 @@
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "title action"
+    "meta action";
+  column-gap: var(--s2);
+  padding: var(--s1) 0;
+  border-top: 1px solid var(--band-strong);
+}
+
+.title {
+  grid-area: title;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meta {
+  grid-area: meta;
+  display: flex;
+  gap: var(--s3);
+  color: var(--ink-muted);
+  font-size: var(--text-s);
+}
+
+.add,
+.all,
+.link {
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-size: var(--text-s);
+  cursor: pointer;
+  padding: 0;
+}
+
+.add {
+  grid-area: action;
+  align-self: center;
+}
+
+.add:hover,
+.all:hover,
+.link:hover {
+  text-decoration: underline;
+}
+
+.mark {
+  grid-area: action;
+  align-self: center;
+  color: var(--ink-faint);
+  font-size: var(--text-s);
+}
+
+.done .title {
+  color: var(--ink-muted);
+}
+
+.empty {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: var(--text-s);
+}

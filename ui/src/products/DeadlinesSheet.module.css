@@ -1,0 +1,84 @@
+.sheet {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
+  background: var(--sheet);
+}
+
+.list,
+.reminders {
+  padding: var(--s3) var(--s4) 0;
+}
+
+.list {
+  max-height: 50vh;
+  overflow-y: auto;
+  padding-bottom: var(--s3);
+  border-bottom: 1px solid var(--ruling);
+}
+
+.list h2,
+.reminders h2 {
+  margin: 0 0 var(--s2);
+  font-size: var(--text-m);
+}
+
+.reminders h2 span {
+  color: var(--ink-muted);
+  font-size: var(--text-s);
+  font-weight: 400;
+}
+
+.empty {
+  margin: 0;
+  color: var(--ink-muted);
+}
+
+.table {
+  width: 100%;
+  max-width: 900px;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: var(--s1) var(--s2);
+  border-bottom: 1px solid var(--ruling);
+  text-align: left;
+}
+
+.table th {
+  background: var(--band);
+  color: var(--ink-muted);
+  font-size: var(--text-s);
+  font-weight: 400;
+}
+
+.num {
+  width: 110px;
+  text-align: right !important;
+}
+
+/* Color carries the state only (PLAN §8). */
+.overdue td {
+  color: var(--danger);
+  font-weight: 700;
+}
+
+.soon td {
+  color: var(--warn);
+}
+
+.reminders {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+}
+
+.grid {
+  position: relative;
+  min-height: 0;
+  margin: 0 calc(-1 * var(--s4));
+  border-top: 1px solid var(--ruling);
+}

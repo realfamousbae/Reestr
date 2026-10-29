@@ -1,0 +1,181 @@
+.screen {
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+  grid-template-areas: "top" "notice" "totals" "content" "bottom";
+  height: 100%;
+}
+
+.notices {
+  grid-area: notice;
+}
+
+/* Deadlines within a week or overdue, once when the file opens (PLAN §7). */
+.notice {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s3);
+  padding: var(--s2) var(--s4);
+  background: var(--warn-bg);
+  border-bottom: 1px solid var(--ruling);
+  color: var(--ink);
+}
+
+.notice ul {
+  flex: 1;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.noticeTitle {
+  color: var(--warn);
+  font-weight: 700;
+}
+
+.notice .close {
+  margin-left: 0;
+}
+
+/* Rows from the phone to take (D39): news, not a warning. */
+.notice.phone {
+  align-items: center;
+  background: var(--accent-wash);
+}
+
+.notice.phone p {
+  flex: 1;
+  margin: 0;
+}
+
+.phoneTitle {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.phonePassword {
+  width: 180px;
+  padding: var(--s1) var(--s2);
+  border: 1px solid var(--ruling-strong);
+  border-radius: var(--radius);
+}
+
+/* The totals band exists only on month sheets; its row collapses elsewhere. */
+.totals {
+  grid-area: totals;
+}
+
+.top {
+  grid-area: top;
+  display: flex;
+  align-items: baseline;
+  gap: var(--s3);
+  padding: var(--s2) var(--s4);
+  background: var(--sheet);
+  border-bottom: 1px solid var(--ruling);
+}
+
+.brand {
+  font-weight: 700;
+  font-size: var(--text-m);
+}
+
+.file {
+  color: var(--ink-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.close {
+  margin-left: auto;
+  padding: var(--s1) var(--s3);
+  border: 1px solid var(--ruling-strong);
+  border-radius: var(--radius);
+  background: var(--sheet);
+  cursor: pointer;
+}
+
+.importButton {
+  margin-left: auto;
+}
+
+.importButton ~ .close {
+  margin-left: 0;
+}
+
+.close:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.close:hover {
+  background: var(--band);
+}
+
+.content {
+  grid-area: content;
+  position: relative;
+  min-height: 0;
+  background: var(--sheet);
+}
+
+/* The journal on the left, the month's blocks on the right (PLAN §8). */
+.monthSheet {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  height: 100%;
+}
+
+.grid {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* An empty month says how to start; clicks pass through to the grid under it. */
+.emptyHint {
+  position: absolute;
+  top: 30%;
+  left: 50%;
+  z-index: 1;
+  width: min(52ch, 80%);
+  margin: 0;
+  padding: var(--s3) var(--s4);
+  transform: translateX(-50%);
+  background: var(--sheet);
+  border: 1px solid var(--ruling);
+  color: var(--ink-muted);
+  text-align: center;
+  pointer-events: none;
+}
+
+.side {
+  overflow-y: auto;
+  background: var(--paper);
+  border-left: 1px solid var(--ruling);
+}
+
+.bottom {
+  grid-area: bottom;
+  display: flex;
+  align-items: stretch;
+  gap: var(--s4);
+  background: var(--band);
+  border-top: 1px solid var(--ruling);
+  min-height: 34px;
+}
+
+.status {
+  margin: 0 var(--s4) 0 auto;
+  align-self: center;
+  color: var(--ink-muted);
+  font-size: var(--text-s);
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.error {
+  color: var(--danger);
+}

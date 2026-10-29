@@ -1,0 +1,94 @@
+/*
+ * Reestr design tokens. The look borrows from a ruled ledger book: blue-black ink on white
+ * sheets, grey-green ruling, a pale green header band. Color carries state only.
+ * Every text/background pair below is at least 4.5:1 (PLAN §8).
+ */
+:root {
+  /* Surfaces */
+  --paper: #f7f9f7; /* app background around the sheet */
+  --sheet: #ffffff; /* cells, panels */
+  --band: #ecf1ed; /* header band, totals band */
+  --band-strong: #e4eae5; /* inactive sheet tabs, hovered header */
+
+  /* Ruling */
+  --ruling: #d3dcd5; /* cell borders */
+  --ruling-strong: #7d9184; /* field borders (≥ 3:1 on white), the rule under totals */
+  --margin-red: #d98a8a; /* the notebook margin on the start page; decoration only */
+
+  /* Ink */
+  --ink: #1d2b45; /* main text: blue-black, like a pen */
+  --ink-muted: #4a586d; /* headers, labels, derived values */
+  --ink-faint: #586478; /* hints */
+
+  /* Accent: selection and focus only */
+  --accent: #2346b0;
+  --accent-strong: #1b3a96;
+  --accent-wash: #e3e9f8;
+
+  /* States */
+  --warn: #8a4500;
+  --warn-bg: #fff1dc;
+  --danger: #a41c1c;
+  --danger-bg: #fcebea;
+
+  /* Type */
+  --font: "PT Sans", "Segoe UI", system-ui, sans-serif;
+  --grid-font-size: 15px; /* the default; the tables take the user's size (D34) */
+  --text-s: 13px;
+  --text-m: 15px;
+  --text-l: 19px;
+  --text-xl: 34px;
+
+  /* Space: a 4 px step */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --s6: 32px;
+  --s7: 48px;
+
+  --radius: 4px;
+  --focus-ring: 0 0 0 2px var(--sheet), 0 0 0 4px var(--accent);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: var(--text-m);
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

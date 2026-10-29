@@ -1,0 +1,72 @@
+# The Windows installer (.exe via NSIS, .msi via WiX). Windows minutes cost more (PLAN §16),
+# so this runs only by hand (Actions → Windows build → Run workflow) and on version tags.
+# Every run uploads the installers as workflow artifacts. A `v*` tag, or a manual run with
+# «release» filled in, also publishes a GitHub release with them (D35); the release is made
+# only after the build succeeds.
+name: Windows build
+
+on:
+  workflow_dispatch:
+    inputs:
+      release:
+        description: "Publish a release with this tag, e.g. v0.1.0 (empty: build only)"
+        required: false
+        default: ""
+  push:
+    tags: ["v*"]
+
+concurrency:
+  group: windows-build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    env:
+      # The pushed tag, or the one typed for a manual run; empty: build only, no release.
+      RELEASE_TAG: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || inputs.release }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      # SQLCipher links a vendored OpenSSL on Windows (PLAN D15). Its build needs a native
+      # Windows Perl; make sure it does not pick the MSYS perl that comes with Git.
+      - name: Use Strawberry Perl for OpenSSL
+        shell: pwsh
+        run: |
+          $perl = "C:\Strawberry\perl\bin\perl.exe"
+          if (Test-Path $perl) {
+            "OPENSSL_SRC_PERL=$perl" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          } else {
+            Write-Host "Strawberry Perl not found, using perl from PATH"
+          }
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      - uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ env.RELEASE_TAG }}
+          releaseName: "Реестр ${{ env.RELEASE_TAG }}"
+          releaseBody: "Установщики для Windows: .exe (рекомендуется) и .msi; приложение для Android — .apk. Как установить, пройти предупреждение SmartScreen и начать работу — в инструкции: https://reestr-docs.up.railway.app/start/install/"
+          # A manual run tags the commit it built.
+          releaseCommitish: ${{ github.sha }}
+          releaseDraft: false
+          uploadWorkflowArtifacts: true
+          uploadUpdaterJson: false

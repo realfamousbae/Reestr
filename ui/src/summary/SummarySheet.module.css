@@ -1,0 +1,148 @@
+.sheet {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
+  background: var(--sheet);
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--s3);
+  padding: var(--s2) var(--s4);
+  border-bottom: 1px solid var(--ruling);
+}
+
+.bar h2 {
+  margin: 0;
+  font-size: var(--text-m);
+}
+
+.years,
+.mode {
+  display: flex;
+  gap: 2px;
+}
+
+.years button,
+.mode button {
+  padding: 0 var(--s2);
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--ink-muted);
+  font-size: var(--text-s);
+  line-height: 1.6;
+  cursor: pointer;
+}
+
+.years button[aria-selected="true"],
+.mode button[aria-checked="true"] {
+  border-color: var(--ruling-strong);
+  background: var(--sheet);
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.years button:hover,
+.mode button:hover {
+  background: var(--band);
+}
+
+.note,
+.hint {
+  color: var(--ink-faint);
+  font-size: var(--text-s);
+}
+
+.hint {
+  margin: 0;
+  padding: var(--s3) var(--s4);
+}
+
+.scroll {
+  overflow: auto;
+  min-height: 0;
+}
+
+.table {
+  border-collapse: separate;
+  border-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.table th,
+.table td {
+  padding: 3px var(--s2);
+  border-right: 1px solid var(--ruling);
+  border-bottom: 1px solid var(--ruling);
+  white-space: nowrap;
+}
+
+.table td {
+  min-width: 88px;
+  text-align: right;
+}
+
+/* Headers wrap («Лечение/лекарства»); the header row and the month column stay in view. */
+.table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  max-width: 120px;
+  background: var(--band);
+  color: var(--ink-muted);
+  font-size: var(--text-s);
+  font-weight: 400;
+  line-height: 1.2;
+  text-align: center;
+  vertical-align: bottom;
+  white-space: normal;
+}
+
+.label,
+.footLabel {
+  position: sticky;
+  left: 0;
+  background: var(--sheet);
+  text-align: left;
+  font-weight: 400;
+}
+
+.table thead th.label {
+  z-index: 2;
+  color: var(--ink);
+  font-weight: 700;
+  text-align: left;
+}
+
+.table tfoot th,
+.table tfoot td {
+  background: var(--band);
+}
+
+.table tfoot tr:first-child th,
+.table tfoot tr:first-child td {
+  border-top: 2px solid var(--ruling-strong);
+  font-weight: 700;
+}
+
+.footLabel {
+  color: var(--ink-muted);
+}
+
+.empty th {
+  color: var(--ink-faint);
+}
+
+.muted {
+  color: var(--ink-faint);
+}
+
+/* Color carries the state only (PLAN §8): a month that spent more than planned. */
+.danger {
+  color: var(--danger);
+  font-weight: 700;
+}

@@ -1,0 +1,21 @@
+[package]
+name = "reestr-core"
+description = "Reestr domain model and business logic (no SQL, no Tauri)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+# Reading the source .xlsx workbook (PLAN §9).
+calamine.workspace = true
+# Writing the xlsx export (PLAN §9, D29).
+rust_xlsxwriter.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+time.workspace = true
+
+[lints]
+workspace = true

@@ -1,0 +1,16 @@
+.input {
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--grid-font-size);
+}
+
+.input::selection {
+  background: var(--accent-wash);
+  color: var(--ink);
+}

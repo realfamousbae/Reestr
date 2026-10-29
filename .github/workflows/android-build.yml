@@ -1,0 +1,115 @@
+# The Android app (D38): an APK for arm64 phones, signed with the family's release key.
+# Like the Windows build it runs only by hand (Actions → Android build → Run workflow) and on
+# version tags (D36). Every run uploads the APK as a workflow artifact. A `v*` tag, or a manual
+# run with «release» filled in, also attaches it to the GitHub release of that tag.
+#
+# The key lives in the repository secrets: ANDROID_KEYSTORE (the .jks file in base64) and
+# ANDROID_KEY_PASSWORD. Updates install over the app only when signed with the same key.
+name: Android build
+
+on:
+  workflow_dispatch:
+    inputs:
+      release:
+        description: "Attach the APK to the release with this tag, e.g. v0.2.0 (empty: build only)"
+        required: false
+        default: ""
+  push:
+    tags: ["v*"]
+
+concurrency:
+  group: android-build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      # The pushed tag, or the one typed for a manual run; empty: build only, no release.
+      RELEASE_TAG: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || inputs.release }}
+      NDK_VERSION: 29.0.14206865
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check the release key
+        env:
+          ANDROID_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -z "$ANDROID_KEYSTORE" ] || [ -z "$ANDROID_KEY_PASSWORD" ]; then
+            echo "::error::The secrets ANDROID_KEYSTORE and ANDROID_KEY_PASSWORD are not set"
+            exit 1
+          fi
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: android-actions/setup-android@v4
+
+      # The NDK's LLVM tools go on PATH: the OpenSSL build of SQLCipher looks for llvm-ranlib
+      # and llvm-ar there (NDK r23+ has no aarch64-linux-android-ranlib).
+      - name: Install the NDK and the Android platform
+        run: |
+          sdkmanager "ndk;${NDK_VERSION}" "platforms;android-37.0" "build-tools;36.1.0"
+          echo "NDK_HOME=${ANDROID_HOME}/ndk/${NDK_VERSION}" >> "$GITHUB_ENV"
+          echo "${ANDROID_HOME}/ndk/${NDK_VERSION}/toolchains/llvm/prebuilt/linux-x86_64/bin" >> "$GITHUB_PATH"
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: android
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Release key from the secrets
+        env:
+          ANDROID_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          echo "$ANDROID_KEYSTORE" | base64 -d > "$RUNNER_TEMP/reestr-release.jks"
+          printf 'password=%s\nkeyAlias=reestr\nstoreFile=%s\n' \
+            "$ANDROID_KEY_PASSWORD" "$RUNNER_TEMP/reestr-release.jks" \
+            > crates/app/gen/android/keystore.properties
+
+      - name: Build the APK
+        run: pnpm tauri android build --apk --target aarch64
+
+      - name: Name the APK
+        run: |
+          version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
+          cp crates/app/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk \
+            "Reestr_${version}_arm64.apk"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: reestr-android
+          path: Reestr_*_arm64.apk
+          if-no-files-found: error
+
+      - name: Attach to the release
+        if: env.RELEASE_TAG != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if ! gh release view "$RELEASE_TAG" > /dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" --target "$GITHUB_SHA" --title "Реестр $RELEASE_TAG" \
+              --notes "Как установить и начать работу — в инструкции: https://reestr-docs.up.railway.app/guide/phone/"
+          fi
+          gh release upload "$RELEASE_TAG" Reestr_*_arm64.apk --clobber

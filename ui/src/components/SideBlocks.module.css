@@ -1,0 +1,162 @@
+.block {
+  padding: var(--s3) var(--s4);
+  border-bottom: 1px solid var(--ruling);
+}
+
+/* A long title and its action share a line when they fit; otherwise the action moves under. */
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px var(--s2);
+  margin-bottom: var(--s2);
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--text-m);
+  white-space: nowrap;
+}
+
+.fold {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--s1);
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--ink);
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.chevron {
+  width: 0.9em;
+  color: var(--ink-faint);
+  font-weight: 400;
+}
+
+.figures {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s3);
+  margin: 0;
+}
+
+.figures dt {
+  color: var(--ink-muted);
+  font-size: var(--text-s);
+}
+
+.figures dd {
+  margin: 0;
+}
+
+.big {
+  font-size: var(--text-l);
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-size: var(--text-s);
+  cursor: pointer;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+.empty p,
+.emptyLine {
+  margin: 0 0 var(--s1);
+  color: var(--ink-muted);
+  font-size: var(--text-s);
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.list li {
+  display: flex;
+  flex-direction: column;
+  padding: var(--s1) 0;
+  border-top: 1px solid var(--band-strong);
+}
+
+.title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meta,
+.state {
+  color: var(--ink-muted);
+  font-size: var(--text-s);
+}
+
+/* Color carries the state only (PLAN §8): used up or overdue in red, within a week in amber. */
+.danger .state {
+  color: var(--danger);
+  font-weight: 700;
+}
+
+.warn .state {
+  color: var(--warn);
+  font-weight: 700;
+}
+
+.ready .state {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.note {
+  margin: var(--s2) 0 0;
+  color: var(--ink-faint);
+  font-size: var(--text-s);
+}
+
+.plan {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: var(--s2);
+}
+
+.rows {
+  margin: 0;
+}
+
+.rows div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s2);
+  padding: 2px 0;
+  border-top: 1px solid var(--band-strong);
+}
+
+.rows dt {
+  color: var(--ink-muted);
+  font-size: var(--text-s);
+}
+
+.rows dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.rows .danger dd {
+  color: var(--danger);
+  font-weight: 700;
+}

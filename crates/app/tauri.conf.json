@@ -1,0 +1,77 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Reestr",
+  "version": "0.2.1",
+  "mainBinaryName": "Reestr",
+  "identifier": "io.github.realfamousbae.reestr",
+  "build": {
+    "devUrl": "http://localhost:5173",
+    "frontendDist": "../../ui/dist",
+    "beforeDevCommand": "pnpm --filter reestr-ui dev",
+    "beforeBuildCommand": "pnpm --filter reestr-ui build"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Реестр",
+        "width": 1440,
+        "height": 900,
+        "minWidth": 1024,
+        "minHeight": 640,
+        "center": true
+      }
+    ],
+    "security": {
+      "csp": {
+        "default-src": "'self'",
+        "script-src": "'self'",
+        "style-src": "'self' 'unsafe-inline'",
+        "img-src": "'self' data: blob:",
+        "font-src": "'self' data:",
+        "connect-src": "ipc: http://ipc.localhost",
+        "object-src": "'none'",
+        "base-uri": "'none'",
+        "form-action": "'none'",
+        "frame-ancestors": "'none'"
+      },
+      "devCsp": {
+        "default-src": "'self'",
+        "script-src": "'self' 'unsafe-inline' http://localhost:5173",
+        "style-src": "'self' 'unsafe-inline'",
+        "img-src": "'self' data: blob:",
+        "font-src": "'self' data:",
+        "connect-src": "ipc: http://ipc.localhost http://localhost:5173 ws://localhost:5173",
+        "object-src": "'none'",
+        "base-uri": "'none'",
+        "form-action": "'none'",
+        "frame-ancestors": "'none'"
+      },
+      "freezePrototype": true
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis", "msi"],
+    "category": "Finance",
+    "shortDescription": "Семейный бюджет: журнал трат, карты и кэшбэк",
+    "copyright": "MIT License",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "nsis": {
+        "languages": ["Russian"],
+        "displayLanguageSelector": false,
+        "installMode": "currentUser"
+      },
+      "wix": {
+        "language": "ru-RU"
+      }
+    }
+  }
+}

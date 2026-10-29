@@ -1,0 +1,95 @@
+/* Totals band. The double rule underneath is the bookkeeping mark of a final sum. */
+.bar {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: stretch;
+  background: var(--band);
+  border-bottom: 3px double var(--ruling-strong);
+}
+
+.fixed {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--s3);
+  padding: var(--s2) var(--s4);
+}
+
+.list {
+  display: flex;
+  gap: var(--s4);
+  margin: 0;
+}
+
+.categories {
+  padding: var(--s2) var(--s4);
+  overflow-x: auto;
+  scrollbar-width: thin;
+  border-left: 1px solid var(--ruling);
+}
+
+.right {
+  padding: var(--s2) var(--s4);
+  border-left: 1px solid var(--ruling);
+}
+
+.cell {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.cell dt {
+  font-size: var(--text-s);
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+
+.cell dt::first-letter {
+  text-transform: uppercase;
+}
+
+.cell dd {
+  margin: 0;
+  font-size: var(--text-m);
+  white-space: nowrap;
+}
+
+.total dd {
+  font-size: var(--text-l);
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.zero dd {
+  color: var(--ink-faint);
+}
+
+.warn dt,
+.warn dd {
+  color: var(--warn);
+}
+
+/* «Категории | Группы»: a quiet two-way switch. */
+.mode {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mode button {
+  padding: 0 var(--s2);
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--ink-muted);
+  font-size: var(--text-s);
+  line-height: 1.5;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mode button[aria-checked="true"] {
+  border-color: var(--ruling-strong);
+  background: var(--sheet);
+  color: var(--ink);
+}

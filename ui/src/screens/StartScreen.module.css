@@ -1,0 +1,171 @@
+/*
+ * The start page is a ledger sheet: the red margin of a Russian school notebook and the
+ * double rule of a total under the title. It is the only decorated surface; the working
+ * screens stay plain.
+ */
+.screen {
+  min-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--s6) var(--s4);
+  background: var(--paper);
+}
+
+.page {
+  position: relative;
+  width: min(560px, 100%);
+  padding: var(--s6) var(--s6) var(--s6) calc(var(--s7) + var(--s4));
+  background: var(--sheet);
+  border: 1px solid var(--ruling);
+}
+
+.page::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--s7);
+  border-left: 1px solid var(--margin-red);
+}
+
+.title {
+  margin: 0;
+  padding-bottom: var(--s2);
+  border-bottom: 3px double var(--ruling-strong);
+  font-size: var(--text-xl);
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+}
+
+.lead {
+  margin: var(--s3) 0 var(--s5);
+  max-width: 44ch;
+  color: var(--ink-muted);
+}
+
+.actions,
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s3);
+  align-items: center;
+}
+
+.actions {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.primary,
+.secondary {
+  min-width: 200px;
+  padding: var(--s2) var(--s4);
+  border-radius: var(--radius);
+  font-size: var(--text-m);
+  cursor: pointer;
+  text-align: left;
+}
+
+.primary {
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--sheet);
+  font-weight: 700;
+}
+
+.primary:hover:not(:disabled) {
+  background: var(--accent-strong);
+}
+
+.secondary {
+  border: 1px solid var(--ruling-strong);
+  background: var(--sheet);
+}
+
+.secondary:hover:not(:disabled) {
+  background: var(--band);
+}
+
+.primary:disabled,
+.secondary:disabled {
+  cursor: progress;
+  opacity: 0.75;
+}
+
+.recent {
+  padding: var(--s1) 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--text-l);
+}
+
+.path {
+  margin: 0;
+  color: var(--ink-faint);
+  font-size: var(--text-s);
+  overflow-wrap: anywhere;
+}
+
+.warning {
+  padding: var(--s3) var(--s4);
+  background: var(--warn-bg);
+  color: var(--warn);
+  border-left: 3px solid var(--warn);
+}
+
+.warning p {
+  margin: 0;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+  max-width: 340px;
+}
+
+.field span {
+  color: var(--ink-muted);
+  font-size: var(--text-s);
+}
+
+.field input {
+  padding: var(--s2) var(--s3);
+  border: 1px solid var(--ruling-strong);
+  border-radius: var(--radius);
+  background: var(--sheet);
+  font-size: var(--text-m);
+}
+
+.check {
+  display: flex;
+  gap: var(--s2);
+  align-items: center;
+  cursor: pointer;
+}
+
+.check input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+}
+
+.error {
+  margin: 0;
+  color: var(--danger);
+}

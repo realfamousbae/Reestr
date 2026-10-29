@@ -1,0 +1,23 @@
+{
+  "name": "reestr",
+  "private": true,
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "tauri": "tauri",
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "ui:dev": "pnpm --filter reestr-ui dev",
+    "site:dev": "pnpm --filter reestr-site dev",
+    "site:build": "pnpm --filter reestr-site build",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "pnpm format:check && pnpm --filter reestr-ui typecheck && pnpm --filter reestr-ui lint && pnpm --filter reestr-ui test"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "2.12.4",
+    "prettier": "3.9.10"
+  }
+}

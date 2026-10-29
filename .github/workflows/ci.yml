@@ -1,0 +1,76 @@
+# Fast checks on Linux (PLAN §16, D36): for a pull request to master that is ready (a large
+# change; small ones gather on the working branch and are checked locally), and by hand. Not on
+# pushes, not on draft pull requests, not on changes to the docs only. One job, because every
+# job is rounded up to whole minutes.
+name: CI
+
+on:
+  pull_request:
+    branches: [master]
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+      - "site/**"
+      - "LICENSE"
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      # WebKitGTK and friends, so clippy can check the Tauri crate (crates/app) too.
+      - name: Install Tauri system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev libxdo-dev libayatana-appindicator3-dev librsvg2-dev
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Format
+        run: |
+          pnpm format:check
+          cargo fmt --all --check
+
+      - name: UI typecheck, lint, tests
+        run: |
+          pnpm --filter reestr-ui typecheck
+          pnpm --filter reestr-ui lint
+          pnpm --filter reestr-ui test
+
+      # The Tauri crate embeds ui/dist at compile time, so the UI is built before clippy.
+      - name: UI build
+        run: pnpm --filter reestr-ui build
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+      # The Tauri crate has no tests; skipping it avoids a second full build of Tauri.
+      - name: Rust tests
+        run: cargo test --workspace --exclude reestr-app --locked
