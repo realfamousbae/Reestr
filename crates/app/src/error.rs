@@ -66,14 +66,7 @@ impl From<StorageError> for CommandError {
             StorageError::Rule(RuleError::NegativeLimit) => Self::new("negative_limit", message),
             StorageError::DuplicateRule => Self::new("duplicate_rule", message),
             StorageError::Export(_) => Self::new("export_failed", message),
-            StorageError::PhoneFile => Self::new("phone_file", message),
-            StorageError::SnapshotFile => Self::new("snapshot_file", message),
-            StorageError::NotFromPhone => Self::new("not_from_phone", message),
-            StorageError::NotForPhone => Self::new("not_for_phone", message),
-            StorageError::OtherFile => Self::new("other_file", message),
-            StorageError::OlderCopy => Self::new("older_copy", message),
-            StorageError::ComputerOnly => Self::new("computer_only", message),
-            StorageError::NotPhoneRow => Self::new("not_phone_row", message),
+            StorageError::PhoneCopy => Self::new("phone_copy", message),
             StorageError::Product(error) => {
                 let code = match error {
                     ProductError::EndBeforeStart => "end_before_start",

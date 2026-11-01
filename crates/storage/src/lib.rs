@@ -6,7 +6,6 @@
 mod copies;
 mod dict;
 mod error;
-mod exchange;
 mod export;
 mod history;
 mod import;
@@ -20,7 +19,6 @@ mod vault;
 pub use copies::{COPIES_KEPT, CopyOutcome, FileCopy, copies_dir};
 pub use dict::{Created, Dictionaries};
 pub use error::StorageError;
-pub use exchange::{ExchangePaths, PhoneStart, Role, SnapshotStatus, TakeReport, exchange_paths};
 pub use history::Replayed;
 pub use import::{ImportPreview, ImportReport, PreviewCard, PreviewMonth, PreviewName};
 pub use journal::ApplyOutcome;

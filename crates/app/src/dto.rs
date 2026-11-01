@@ -13,7 +13,7 @@ use reestr_core::{
 };
 use reestr_storage::{
     COPIES_KEPT, CipherSetting, Created, Dictionaries, FileInfo, ImportReport, ProductsData,
-    StorageError, TakeReport, Vault, copies_dir,
+    StorageError, Vault, copies_dir,
 };
 use serde::Serialize;
 
@@ -163,13 +163,6 @@ struct Names {
     categories: HashMap<i64, String>,
     participants: HashMap<i64, String>,
     products: HashMap<i64, String>,
-}
-
-impl EntryView {
-    /// One entry with the names of its references.
-    pub fn of(d: &Dictionaries, e: &Entry) -> Self {
-        Names::new(d).view(e)
-    }
 }
 
 impl Names {
@@ -432,47 +425,6 @@ pub struct DictResult {
 pub struct ImportResult {
     pub report: ImportReport,
     pub history: HistoryState,
-}
-
-/// The phone's file in the exchange folder (D39).
-#[derive(Debug, Serialize)]
-#[serde(tag = "state", rename_all = "camelCase")]
-pub enum PhoneCheck {
-    /// No exchange folder is chosen on this computer.
-    Off,
-    /// The phone has not written its file yet.
-    NoFile,
-    /// Everything in the phone's file is taken.
-    UpToDate,
-    Changes {
-        report: TakeReport,
-    },
-    /// The phone's file does not open with the key of this file: the password was changed
-    /// since, or the file is not fully synced yet.
-    NeedsPassword,
-    /// The file could not be read; `code` is an error code.
-    Problem {
-        code: &'static str,
-    },
-}
-
-/// The exchange with the phone as the workbook shows it.
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ExchangeView {
-    /// The copy for the phone could not be written to the folder.
-    pub copy_failed: bool,
-    pub phone: PhoneCheck,
-}
-
-/// The result of «Забрать с телефона».
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TakeResult {
-    pub report: TakeReport,
-    pub history: HistoryState,
-    /// The new copy for the phone could not be written.
-    pub copy_failed: bool,
 }
 
 /// A tranche of a credit card with what it owes.

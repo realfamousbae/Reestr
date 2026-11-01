@@ -8,17 +8,14 @@ use reestr_core::{
     DictKind, DictOp, EntryId, InflowOp, JournalOp, Kopecks, Month, ProductOp, RuleOp, TemplateId,
     YearSummary,
 };
-use reestr_storage::{
-    CopyOutcome, Dictionaries, ImportPreview, StorageError, Vault, exchange_paths,
-};
+use reestr_storage::{CopyOutcome, Dictionaries, ImportPreview, StorageError, Vault};
 use tauri::State;
 use time::Date;
 use zeroize::Zeroizing;
 
 use crate::dto::{
-    AboutView, ChangeResult, DictResult, ExchangeView, FileInfoDto, HistoryState, ImportResult,
-    MonthTab, MonthView, PhoneCheck, ProductsResult, ProductsView, ReplayResult, SuggestionView,
-    TakeResult,
+    AboutView, ChangeResult, DictResult, FileInfoDto, HistoryState, ImportResult, MonthTab,
+    MonthView, ProductsResult, ProductsView, ReplayResult, SuggestionView,
 };
 use crate::error::CommandError;
 use crate::state::{AppState, lock, with_vault};
@@ -79,115 +76,16 @@ pub fn vault_change_password(
     with_vault(&state, |v| Ok(v.change_password(&current, &new)?))
 }
 
-/// Closes the file. The phone gets a copy of it as it is now (D39).
+/// Closes the file.
 #[tauri::command]
 pub fn vault_close(state: State<'_, AppState>) -> CommandResult<()> {
     let mut vault = lock(&state.vault)?;
     lock(&state.extra_months)?.clear();
     *lock(&state.import)? = None;
-    if let Some(mut open) = vault.take() {
-        write_copy(&state, &mut open);
+    if let Some(open) = vault.take() {
         open.close()?;
     }
     Ok(())
-}
-
-/// When the window closes: the phone gets a copy of the open file (D39).
-pub fn on_exit(state: &AppState) {
-    if let Ok(mut vault) = lock(&state.vault)
-        && let Some(open) = vault.as_mut()
-    {
-        write_copy(state, open);
-    }
-}
-
-/// Writes the copy for the phone into the exchange folder, if one is chosen, and an empty file
-/// from the phone the first time. Returns `false` when they could not be written.
-fn write_copy(state: &AppState, vault: &mut Vault) -> bool {
-    let Ok(folder) = lock(&state.exchange).map(|f| f.clone()) else {
-        return false;
-    };
-    let Some(folder) = folder else {
-        return true;
-    };
-    let Some(paths) = exchange_paths(vault.path(), &folder) else {
-        return false;
-    };
-    // The phone opens its file for writing only if it exists: the first time it is empty.
-    let reply_ready =
-        paths.from_phone.exists() || vault.write_empty_phone_file(&paths.from_phone).is_ok();
-    vault.write_for_phone(&paths.for_phone).is_ok() && reply_ready
-}
-
-/// What the phone's file in the exchange folder holds for the open file.
-fn check_phone(state: &AppState, vault: &Vault) -> CommandResult<PhoneCheck> {
-    let Some(folder) = lock(&state.exchange)?.clone() else {
-        return Ok(PhoneCheck::Off);
-    };
-    let Some(paths) = exchange_paths(vault.path(), &folder) else {
-        return Ok(PhoneCheck::Problem { code: "not_found" });
-    };
-    if !paths.from_phone.is_file() {
-        return Ok(PhoneCheck::NoFile);
-    }
-    Ok(match vault.phone_preview(&paths.from_phone, None) {
-        Ok(report) if report.is_empty() => PhoneCheck::UpToDate,
-        Ok(report) => PhoneCheck::Changes { report },
-        Err(StorageError::WrongPassword) => PhoneCheck::NeedsPassword,
-        Err(error) => PhoneCheck::Problem {
-            code: CommandError::from(error).code,
-        },
-    })
-}
-
-/// Sets the exchange folder with the phone on this computer (D39), or none. With a folder,
-/// writes the copy for the phone at once and looks at the phone's file.
-#[tauri::command(async)]
-pub fn exchange_folder(
-    state: State<'_, AppState>,
-    folder: Option<String>,
-) -> CommandResult<ExchangeView> {
-    *lock(&state.exchange)? = folder.map(Into::into);
-    with_vault(&state, |v| {
-        Ok(ExchangeView {
-            copy_failed: !write_copy(&state, v),
-            phone: check_phone(&state, v)?,
-        })
-    })
-}
-
-/// Looks at the phone's file again, e.g. when the window gets the focus back.
-#[tauri::command(async)]
-pub fn exchange_check(state: State<'_, AppState>) -> CommandResult<ExchangeView> {
-    with_vault(&state, |v| {
-        Ok(ExchangeView {
-            copy_failed: false,
-            phone: check_phone(&state, v)?,
-        })
-    })
-}
-
-/// «Забрать с телефона» (D39), then a fresh copy for the phone. `password` is the phone
-/// file's password when it differs from this file's.
-#[tauri::command(async)]
-pub fn exchange_take(
-    state: State<'_, AppState>,
-    password: Option<String>,
-) -> CommandResult<TakeResult> {
-    let password = password.map(Zeroizing::new);
-    let folder = lock(&state.exchange)?
-        .clone()
-        .ok_or_else(|| CommandError::new("not_found", "no exchange folder"))?;
-    with_vault(&state, |v| {
-        let paths = exchange_paths(v.path(), &folder)
-            .ok_or_else(|| CommandError::new("not_found", "no exchange file name"))?;
-        let report = v.take_from_phone(&paths.from_phone, password.as_ref().map(|p| p.as_str()))?;
-        Ok(TakeResult {
-            report,
-            history: HistoryState::of(v),
-            copy_failed: !write_copy(&state, v),
-        })
-    })
 }
 
 #[tauri::command]

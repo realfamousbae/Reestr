@@ -2564,8 +2564,6 @@ dependencies = [
  "tauri",
  "tauri-build",
  "tauri-plugin-dialog",
- "tauri-plugin-reestr-files",
- "tempfile",
  "time",
  "zeroize",
 ]
@@ -3472,16 +3470,6 @@ dependencies = [
  "thiserror 2.0.21",
  "toml 1.1.8+spec-1.1.0",
  "url",
-]
-
-[[package]]
-name = "tauri-plugin-reestr-files"
-version = "0.2.1"
-dependencies = [
- "serde",
- "tauri",
- "tauri-plugin",
- "thiserror 2.0.21",
 ]
 
 [[package]]

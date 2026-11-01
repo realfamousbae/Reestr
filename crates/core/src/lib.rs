@@ -1,14 +1,13 @@
 //! Reestr core: domain model and business logic.
 //!
 //! Rules (PLAN §4.2, §15):
-//! - no SQLite and no Tauri here, so the crate can later be compiled into an Android library;
+//! - no SQLite and no Tauri here: the crate stays pure logic, independent of the app shell;
 //! - money is integer kopecks ([`money::Kopecks`]), never floats;
 //! - every calculation is a pure function with tests.
 
 pub mod cashback;
 pub mod date;
 pub mod dict;
-pub mod exchange;
 pub mod export;
 pub mod import;
 pub mod journal;

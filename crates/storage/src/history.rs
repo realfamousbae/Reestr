@@ -31,11 +31,10 @@ pub(crate) enum Table {
     Deadline,
     Inflow,
     MonthlyPlan,
-    PhoneTaken,
 }
 
 impl Table {
-    const ALL: [Self; 16] = [
+    const ALL: [Self; 15] = [
         Self::Participant,
         Self::Bank,
         Self::Product,
@@ -51,7 +50,6 @@ impl Table {
         Self::Deadline,
         Self::Inflow,
         Self::MonthlyPlan,
-        Self::PhoneTaken,
     ];
 
     pub(crate) const fn name(self) -> &'static str {
@@ -71,7 +69,6 @@ impl Table {
             Self::Deadline => "deadline",
             Self::Inflow => "inflow",
             Self::MonthlyPlan => "monthly_plan",
-            Self::PhoneTaken => "phone_taken",
         }
     }
 
@@ -168,7 +165,6 @@ impl Table {
                 "notes",
             ],
             Self::MonthlyPlan => &["month", "participant_id", "planned_income"],
-            Self::PhoneTaken => &["key", "rev", "fingerprint"],
         }
     }
 
@@ -389,7 +385,7 @@ pub(crate) enum Direction {
 #[serde(rename_all = "camelCase")]
 pub struct Replayed {
     /// The label of the action: "edit", "append", "delete", "templates", "dictionary", "import",
-    /// "rules", "products", "inflows", "plan", "phone".
+    /// "rules", "products", "inflows", "plan".
     pub label: String,
     /// Months (`YYYY-MM`) whose entries changed, so the UI can show the right sheet.
     pub months: Vec<String>,

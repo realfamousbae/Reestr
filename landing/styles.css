@@ -599,66 +599,6 @@ h2 {
   box-shadow: var(--shadow);
 }
 
-/* A drawn phone with the "which card" prompt, built from the Android screen's wording */
-.phone {
-  justify-self: center;
-  width: min(300px, 100%);
-  padding: 12px;
-  border-radius: 36px;
-  background: var(--ink);
-  box-shadow: var(--shadow);
-}
-.phone-screen {
-  padding: 22px 18px 20px;
-  border-radius: 26px;
-  background: var(--sheet);
-  font-size: 0.9rem;
-}
-.phone-head {
-  margin: 0 0 14px;
-  font: 700 1.05rem/1.2 var(--serif);
-  text-align: center;
-}
-.phone-field {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--ruling);
-}
-.phone-field span {
-  color: var(--ink-muted);
-}
-.phone-sub {
-  margin: 16px 0 8px;
-  font-weight: 700;
-}
-.phone-card {
-  display: grid;
-  padding: 8px 10px;
-  margin-bottom: 8px;
-  border: 1px solid var(--ruling);
-  border-radius: 8px;
-}
-.phone-card span {
-  color: var(--ink-muted);
-  font-size: 0.84rem;
-}
-.phone-card.best {
-  border-color: var(--accent);
-  background: var(--accent-wash);
-}
-.phone-button {
-  display: block;
-  margin-top: 14px;
-  padding: 10px;
-  border-radius: 8px;
-  background: var(--accent);
-  color: var(--on-accent);
-  font-weight: 700;
-  text-align: center;
-}
-
 /* Privacy */
 .privacy {
   background: var(--sheet);

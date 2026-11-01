@@ -28,7 +28,7 @@ source of truth; this file condenses the rules from its §8, §10, §15 and §16
 ## Architecture rules
 
 - `crates/core`: domain + business logic as pure functions with tests. Knows nothing about
-  SQLite or Tauri (it must later compile into an Android library unchanged).
+  SQLite or Tauri.
 - `crates/storage`: SQLite/SQLCipher, schema, migrations, snapshots, `change_log`. No Tauri.
 - `crates/app`: Tauri commands only — thin glue and serialization.
 - `ui/`: React 18.3 + TypeScript (strict) + Glide Data Grid 6.0.3 (PLAN D12: no React 19 until
@@ -82,11 +82,9 @@ source of truth; this file condenses the rules from its §8, §10, §15 and §16
     changes. The default branch is `master`.
   - `windows-build.yml` (windows): full Tauri `.exe`/`.msi` — `workflow_dispatch` and `v*` tags
     only, never on every PR.
-  - `android-build.yml` (ubuntu): the signed arm64 APK (D38) — `workflow_dispatch` and `v*`
-    tags only; the key comes from the secrets `ANDROID_KEYSTORE`, `ANDROID_KEY_PASSWORD`.
   - **D36: CI and builds only for large changes.** Small changes gather on the working branch
     without a pull request and are checked locally before every push. A pull request (and so
-    CI) is opened when a large change is ready. Windows and Android builds and releases run only
+    CI) is opened when a large change is ready. Windows builds and releases run only
     when the author says so.
   - All use caches (`Swatinem/rust-cache`, pnpm) and `concurrency` with `cancel-in-progress`.
 - `cargo test` and `vitest` must be green before opening a PR.

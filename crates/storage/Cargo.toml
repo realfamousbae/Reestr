@@ -18,9 +18,9 @@ thiserror.workspace = true
 time.workspace = true
 zeroize.workspace = true
 
-# PLAN D15: without OpenSSL on the machine `bundled-sqlcipher` does not build on Windows and
-# Android, so OpenSSL is compiled from source and linked statically there (D38).
-[target.'cfg(any(windows, target_os = "android"))'.dependencies]
+# PLAN D15: without OpenSSL on the machine `bundled-sqlcipher` does not build on Windows, so
+# OpenSSL is compiled from source and linked statically there.
+[target.'cfg(windows)'.dependencies]
 rusqlite = { workspace = true, features = ["bundled-sqlcipher-vendored-openssl"] }
 
 [dev-dependencies]

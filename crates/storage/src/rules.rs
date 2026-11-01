@@ -375,21 +375,6 @@ impl Vault {
         self.suggest(month, entry.map(|e| e.id), category, amount)
     }
 
-    /// Cards to pay with for a row not written yet, as the phone types it (D6, D40): by the
-    /// name of its category, if known, and its amount.
-    pub fn card_suggestions_draft(
-        &self,
-        month: Month,
-        category: Option<&str>,
-        amount: Option<Kopecks>,
-    ) -> Result<Vec<CardSuggestion>, StorageError> {
-        let category = match category {
-            Some(name) => crate::dict::find_by_name(&self.conn, DictKind::Category, name)?,
-            None => None,
-        };
-        self.suggest(month, None, category, amount)
-    }
-
     fn suggest(
         &self,
         month: Month,

@@ -7,7 +7,7 @@ use rusqlite::{Connection, params};
 
 use crate::error::StorageError;
 
-const MIGRATIONS: &[&str] = &[
+pub(crate) const MIGRATIONS: &[&str] = &[
     // 1: file metadata (PLAN §4.3).
     "CREATE TABLE meta (
         key   TEXT PRIMARY KEY NOT NULL,
@@ -245,6 +245,13 @@ const MIGRATIONS: &[&str] = &[
         rev         INTEGER NOT NULL CHECK (rev > 0),
         fingerprint TEXT    NOT NULL
     ) STRICT;",
+    // 8: the exchange with the phone is gone (D41). Copies for the phone and the phone's files
+    // are refused before the migrations, so only main files get here. The log keeps its old
+    // `phone` actions and `phone_taken` rows: undo reaches this session's actions only, and
+    // none of those can exist yet.
+    "DROP TABLE phone_change;
+    DROP TABLE phone_taken;
+    DELETE FROM meta WHERE key IN ('file_id', 'snapshot_seq', 'role');",
 ];
 
 /// The schema version this build writes and reads.
@@ -356,26 +363,52 @@ mod tests {
         assert_eq!(count, 0);
     }
 
+    /// Version 8 removes the exchange and nothing else, also from a file that took rows from
+    /// the phone (D41).
     #[test]
-    fn version_7_gives_every_file_its_own_id_once() {
-        let id_of = |conn: &Connection| -> String {
-            conn.query_row("SELECT value FROM meta WHERE key = 'file_id'", [], |r| {
-                r.get(0)
-            })
-            .unwrap()
-        };
-        let mut old = Connection::open_in_memory().unwrap();
-        for sql in &MIGRATIONS[..6] {
-            old.execute_batch(sql).unwrap();
+    fn version_8_removes_the_phone_exchange_and_keeps_the_journal() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        for sql in &MIGRATIONS[..7] {
+            conn.execute_batch(sql).unwrap();
         }
-        old.pragma_update(None, "user_version", 6).unwrap();
-        migrate(&mut old).unwrap();
-        let mut other = Connection::open_in_memory().unwrap();
-        migrate(&mut other).unwrap();
-        let id = id_of(&old);
-        assert_eq!(id.len(), 32);
-        assert_ne!(id, id_of(&other));
-        migrate(&mut old).unwrap();
-        assert_eq!(id_of(&old), id);
+        conn.pragma_update(None, "user_version", 7).unwrap();
+        conn.execute_batch(
+            "INSERT INTO meta (key, value) VALUES ('snapshot_seq', '2'), ('card_suggestions', 'on');
+             INSERT INTO entry (month, position, title, title_key, amount, import_key,
+                                created_at, updated_at)
+                 VALUES ('2026-07', 1, 'Обед', 'обед', 45000, 'phone-1', '', '');
+             INSERT INTO phone_taken (key, rev, fingerprint) VALUES ('phone-1', 1, 'abc');
+             INSERT INTO phone_change (key, entry_id, rev) VALUES ('phone-1', 1, 1);
+             INSERT INTO change_op (ts, label) VALUES ('', 'phone');
+             INSERT INTO change_log (op_id, ts, entity, entity_id, field, new_value)
+                 VALUES (1, '', 'phone_taken', 1, '*', '{}'), (1, '', 'entry', 1, '*', '{}');",
+        )
+        .unwrap();
+        migrate(&mut conn).unwrap();
+
+        assert_eq!(user_version(&conn).unwrap(), SCHEMA_VERSION);
+        let row: (String, i64, String) = conn
+            .query_row("SELECT title, amount, import_key FROM entry", [], |r| {
+                Ok((r.get(0)?, r.get(1)?, r.get(2)?))
+            })
+            .unwrap();
+        assert_eq!(row, ("Обед".to_owned(), 45000, "phone-1".to_owned()));
+        for table in ["phone_change", "phone_taken"] {
+            assert!(conn.prepare(&format!("SELECT 1 FROM {table}")).is_err());
+        }
+        let count = |sql: &str| -> i64 { conn.query_row(sql, [], |r| r.get(0)).unwrap() };
+        assert_eq!(
+            count(
+                "SELECT count(*) FROM meta
+                 WHERE key IN ('file_id', 'snapshot_seq', 'role')"
+            ),
+            0
+        );
+        assert_eq!(
+            count("SELECT count(*) FROM meta WHERE key = 'card_suggestions'"),
+            1
+        );
+        // The old log stays as it was.
+        assert_eq!(count("SELECT count(*) FROM change_log"), 2);
     }
 }

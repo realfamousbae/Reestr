@@ -1,6 +1,0 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- The app is light only, like its pages: the ledger paper shows behind the system bars. -->
-    <style name="Theme.reestr_app" parent="Theme.Material3.Light.NoActionBar">
-        <item name="android:windowBackground">@color/paper</item>
-    </style>
-</resources>

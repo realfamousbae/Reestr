@@ -1,7 +1,6 @@
 import { type FormEvent, useEffect, useState } from "react";
 
-import { type AboutView, type Backend, type ExchangeView, errorMessage } from "../api";
-import { exchangeFileNames } from "../exchange/phone";
+import { type AboutView, type Backend, errorMessage } from "../api";
 import { formatDate } from "../format/date";
 import { passwordProblem } from "../format/password";
 import { cipherText, createdText, formatSize } from "./about";
@@ -17,28 +16,13 @@ import {
 
 interface Props {
   backend: Backend;
-  /** The exchange folder with the phone on this computer (D39). */
-  exchangeFolder: string | null;
-  exchange: ExchangeView | null;
-  onExchangeFolder: (folder: string | null) => void;
   view: ViewSettings;
   onViewChange: (view: ViewSettings) => void;
   onClose: () => void;
 }
 
-/**
- * «Настройки»: the view of this computer (D34), the exchange with the phone (D39), the file,
- * its copies (D32), its password (D33).
- */
-export function SettingsPage({
-  backend,
-  exchangeFolder,
-  exchange,
-  onExchangeFolder,
-  view,
-  onViewChange,
-  onClose,
-}: Props) {
+/** «Настройки»: the view of this computer (D34), the file, its copies (D32), its password (D33). */
+export function SettingsPage({ backend, view, onViewChange, onClose }: Props) {
   const [about, setAbout] = useState<AboutView | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -61,15 +45,6 @@ export function SettingsPage({
       </header>
       <div className={styles.body}>
         <ViewSection view={view} onChange={onViewChange} />
-        {about !== null && (
-          <PhoneSection
-            backend={backend}
-            fileName={about.file.fileName}
-            folder={exchangeFolder}
-            exchange={exchange}
-            onFolder={onExchangeFolder}
-          />
-        )}
         {error !== null && (
           <p className={styles.error} role="alert">
             {error}
@@ -168,93 +143,6 @@ function ViewSection({
           Вернуть порядок, как в книге
         </button>
       </div>
-    </section>
-  );
-}
-
-function PhoneSection({
-  backend,
-  fileName,
-  folder,
-  exchange,
-  onFolder,
-}: {
-  backend: Backend;
-  fileName: string;
-  folder: string | null;
-  exchange: ExchangeView | null;
-  onFolder: (folder: string | null) => void;
-}) {
-  const names = exchangeFileNames(fileName);
-  const pick = () => {
-    backend
-      .pickFolder("Папка обмена с телефоном")
-      .then((chosen) => {
-        if (chosen !== null) onFolder(chosen);
-      })
-      .catch(() => {
-        // A dialog that failed to open changes nothing.
-      });
-  };
-  return (
-    <section className={styles.section} aria-labelledby="phone-heading">
-      <h3 id="phone-heading">Телефон</h3>
-      <p className={styles.note}>
-        Строки, внесённые на телефоне, попадают сюда через папку на Яндекс Диске. Реестр сам в
-        интернет не ходит: файлы переносит приложение Яндекс Диска. Компьютер кладёт в папку копию
-        этого файла для телефона, телефон — свой файл, а кнопка «Забрать» вверху листа переносит его
-        строки в журнал. Если строку меняли и здесь, и на телефоне, остаётся вариант компьютера.
-      </p>
-      {folder === null ? (
-        <div>
-          <button type="button" className={styles.primary} onClick={pick}>
-            Выбрать папку на Яндекс Диске…
-          </button>
-        </div>
-      ) : (
-        <>
-          <dl className={styles.facts}>
-            <dt>Папка обмена</dt>
-            <dd className={styles.path}>{folder}</dd>
-            <dt>Копия для телефона</dt>
-            <dd>{names.forPhone} — пишется при открытии файла, после «Забрать» и при закрытии</dd>
-            <dt>Файл с телефона</dt>
-            <dd>
-              {names.fromPhone}
-              {exchange?.phone.state === "noFile" && " — телефон его ещё не записал"}
-              {exchange?.phone.state === "upToDate" && " — всё забрано"}
-            </dd>
-          </dl>
-          {exchange?.copyFailed === true && (
-            <p className={styles.error} role="alert">
-              Не удалось записать копию для телефона в эту папку. Проверьте, что она на месте.
-            </p>
-          )}
-          <div className={styles.actions}>
-            <button
-              type="button"
-              className={styles.button}
-              onClick={() => {
-                onFolder(folder);
-              }}
-            >
-              Записать копию сейчас
-            </button>
-            <button type="button" className={styles.button} onClick={pick}>
-              Выбрать другую папку…
-            </button>
-            <button
-              type="button"
-              className={styles.link}
-              onClick={() => {
-                onFolder(null);
-              }}
-            >
-              Не обмениваться с телефоном
-            </button>
-          </div>
-        </>
-      )}
     </section>
   );
 }

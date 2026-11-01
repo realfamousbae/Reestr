@@ -8,7 +8,6 @@ included quota, so plan as if they do.
 | ------------------- | -------------- | ----------------------------- | ---------------------------------------------------------------------- | --------------- |
 | `ci.yml`            | ubuntu-latest  | ready PR to `master`, by hand | 4–6 min (cached)                                                       | ×1              |
 | `windows-build.yml` | windows-latest | manual, `v*` tags             | 10–15 min (cached), 25–35 min first run (OpenSSL is built from source) | ×2              |
-| `android-build.yml` | ubuntu-latest  | manual, `v*` tags             | ~14 min first run (SDK, NDK, OpenSSL from source); less with the cache | ×1              |
 
 ## Measured
 

@@ -609,77 +609,6 @@ export interface ImportResult {
   history: HistoryState;
 }
 
-/** What «Забрать с телефона» did, or would do (D39). */
-export interface TakeReport {
-  added: number;
-  changed: number;
-  deleted: number;
-  /** Changed on both sides, or deleted on the computer: the computer's version stays. */
-  kept: number;
-  months: Month[];
-  created: Created[];
-}
-
-/** The phone's file in the exchange folder (D39). */
-export type PhoneCheck =
-  | { state: "off" }
-  | { state: "noFile" }
-  | { state: "upToDate" }
-  | { state: "changes"; report: TakeReport }
-  /** The password was changed since, or the file is not fully synced yet. */
-  | { state: "needsPassword" }
-  | { state: "problem"; code: string };
-
-export interface ExchangeView {
-  /** The copy for the phone could not be written to the folder. */
-  copyFailed: boolean;
-  phone: PhoneCheck;
-}
-
-export interface TakeResult {
-  report: TakeReport;
-  history: HistoryState;
-  copyFailed: boolean;
-}
-
-/** A file picked on Yandex Disk: its address and the name the user saw. */
-export interface Picked {
-  uri: string;
-  name: string | null;
-}
-
-/** The phone's two exchange files (D39). */
-export interface PhoneSetup {
-  /** «… — для телефона.reestr», the copy the computer writes. */
-  copy: Picked | null;
-  /** «… — с телефона.reestr», the file the phone writes. */
-  reply: Picked | null;
-  /** The phone has opened before and has its own file. */
-  started: boolean;
-}
-
-export interface PhoneStart {
-  /** Rows still waiting for the computer, moved into the new copy. */
-  carried: number;
-  /** Rows the computer changed or deleted meanwhile: its version stays. */
-  kept: number;
-}
-
-export interface PhoneOpened {
-  /** The rows moved into a newer copy; null when the copy was not newer. */
-  start: PhoneStart | null;
-  /** The copy could not be read: the phone works with what it had. */
-  offline: boolean;
-  /** The phone's file reached Yandex Disk. */
-  sent: boolean;
-}
-
-/** A month on the phone: its rows, and which of them are the phone's own (D40). */
-export interface PhoneMonth {
-  view: MonthView;
-  own: number[];
-}
-
 /** What a failed command rejects with. */
 export interface CommandError {
   code: string;
@@ -724,37 +653,6 @@ export interface Backend {
   importCancel(): Promise<void>;
   /** Writes the export of the open file to `path`; `today` is "YYYY-MM-DD". */
   exportFile(path: string, format: ExportFormat, today: string): Promise<void>;
-  /**
-   * The exchange folder with the phone on this computer, or none (D39). With a folder, the
-   * copy for the phone is written at once and the phone's file is checked.
-   */
-  exchangeFolder(folder: string | null): Promise<ExchangeView>;
-  /** Checks the phone's file again. */
-  exchangeCheck(): Promise<ExchangeView>;
-  /** «Забрать с телефона»; `password` only when the phone's file has another password. */
-  exchangeTake(password: string | null): Promise<TakeResult>;
-  /** Native folder dialog; null when cancelled. */
-  pickFolder(title: string): Promise<string | null>;
-  /** "android", "windows", "linux"…: the phone's screens are for Android. */
-  appPlatform(): Promise<string>;
-  phoneSetup(): Promise<PhoneSetup>;
-  /** Picks one exchange file: the system picker on Android, `path` when tried on a computer. */
-  phoneChoose(which: "copy" | "reply", path: string | null): Promise<PhoneSetup>;
-  /** Opens the phone's file; `other` is the second password after a change on the computer. */
-  phoneOpen(password: string, other: string | null): Promise<PhoneOpened>;
-  /** Puts the phone's file on Yandex Disk; false when it did not get there. */
-  phoneSend(): Promise<boolean>;
-  phoneMonth(month: Month): Promise<PhoneMonth>;
-  /** «Какой картой платить» for the row being typed (D6). */
-  phoneSuggest(
-    month: Month,
-    category: string | null,
-    amount: Kopecks | null,
-  ): Promise<SuggestionView[]>;
-  /** The last row with this title, to fill the form from. */
-  phoneLast(title: string): Promise<EntryView | null>;
-  /** Native "open" dialog for any file; null when cancelled. */
-  pickAnyFile(title: string): Promise<string | null>;
   /** Native "save as" dialog for an export; null when cancelled. */
   pickExportFile(format: ExportFormat, defaultName: string): Promise<string | null>;
   /** Native "open" dialog for an Excel workbook; null when cancelled. */

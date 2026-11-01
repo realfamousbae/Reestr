@@ -2,8 +2,6 @@ target/
 node_modules/
 ui/dist/
 crates/app/gen/
-crates/files/android/build/
-crates/files/android/.tauri/
 crates/app/icons/
 pnpm-lock.yaml
 docs/reference/

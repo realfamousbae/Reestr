@@ -34,9 +34,6 @@ model goes here, not into code). Newest first.
 
 ## Later
 
-- **Phone: unlock with the fingerprint** (stage 5): the password is asked at every start for
-  now, as agreed; a biometric unlock keeps the password in the Android keystore.
-
 - MCC codes: rules by MCC and an MCC column in the journal (D20).
 
 - `PRAGMA cipher_memory_security` — wipe SQLCipher memory allocations (performance cost).

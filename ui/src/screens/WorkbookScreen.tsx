@@ -6,7 +6,6 @@ import {
   type ChangeResult,
   type DictKind,
   type DictOp,
-  type ExchangeView,
   type ExportFormat,
   type Dictionaries,
   type FileInfo,
@@ -44,13 +43,6 @@ import { JournalGrid } from "../grid/JournalGrid";
 import type { CellContext } from "../grid/columns";
 import { type CellChange, buildBatch } from "../grid/edits";
 import { EXPORT_WARNING, baseName, exportName } from "../export/exportFile";
-import {
-  bannerText,
-  problemText,
-  readExchangeFolder,
-  takenText,
-  writeExchangeFolder,
-} from "../exchange/phone";
 import { DeadlinesSheet } from "../products/DeadlinesSheet";
 import { daysText, deadlineText } from "../products/labels";
 import { ProductsSheet } from "../products/ProductsSheet";
@@ -141,13 +133,6 @@ export function WorkbookScreen({ backend, file, onClose }: Props) {
   /** Deadlines due within a week or overdue, shown once when the file opens (PLAN §7). */
   const [notice, setNotice] = useState<DeadlineView[] | null>(null);
   const noticeShown = useRef(false);
-  /** The exchange folder with the phone on this computer (D39). */
-  const [exchangeFolder, setExchangeFolder] = useState<string | null>(readExchangeFolder);
-  const [exchange, setExchange] = useState<ExchangeView | null>(null);
-  /** The phone's changes the user put off until they change again. */
-  const [phoneLater, setPhoneLater] = useState<string | null>(null);
-  const [phonePassword, setPhonePassword] = useState("");
-  const [taking, setTaking] = useState(false);
   const grid = useRef<DataEditorRef>(null);
   const month = sheet.kind === "month" ? sheet.month : (view?.month ?? currentMonth());
 
@@ -187,51 +172,6 @@ export function WorkbookScreen({ backend, file, onClose }: Props) {
     refreshTabs();
     refreshProducts();
   }, [refreshDictionaries, refreshTitles, refreshTabs, refreshProducts]);
-
-  /** Sets the exchange folder on the backend: writes the copy for the phone, checks its file. */
-  const exchangeWith = useCallback(
-    (folder: string | null) => {
-      backend
-        .exchangeFolder(folder)
-        .then((e) => {
-          setExchange(e);
-          if (e.copyFailed) {
-            setStatus({
-              text: "Не удалось записать копию для телефона в папку обмена. Проверьте, что папка на месте.",
-              kind: "error",
-            });
-          }
-        })
-        .catch(report);
-    },
-    [backend, report],
-  );
-
-  useEffect(() => {
-    if (exchangeFolder !== null) exchangeWith(exchangeFolder);
-    // Only when the file opens; a new folder from «Настройки» is set by onExchangeFolder.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // The phone's file arrives through Yandex Disk while the window may be open: look again
-  // whenever the window gets the focus back.
-  useEffect(() => {
-    if (exchangeFolder === null) return;
-    const onFocus = () => {
-      backend
-        .exchangeCheck()
-        .then((e) => {
-          setExchange((old) => ({ copyFailed: old?.copyFailed ?? false, phone: e.phone }));
-        })
-        .catch(() => {
-          // A check that fails now is tried again on the next focus.
-        });
-    };
-    window.addEventListener("focus", onFocus);
-    return () => {
-      window.removeEventListener("focus", onFocus);
-    };
-  }, [backend, exchangeFolder]);
 
   useEffect(() => {
     if (sheet.kind !== "month") return;
@@ -609,54 +549,6 @@ export function WorkbookScreen({ backend, file, onClose }: Props) {
     [backend, file.fileName, report],
   );
 
-  /** «Забрать с телефона» (D39). */
-  const takeFromPhone = useCallback(
-    (password: string | null) => {
-      setTaking(true);
-      backend
-        .exchangeTake(password)
-        .then((r) => {
-          setExchange({ copyFailed: r.copyFailed, phone: { state: "upToDate" } });
-          setPhonePassword("");
-          const created = createdMessage(r.report.created);
-          setStatus({
-            text: created === null ? takenText(r.report) : `${takenText(r.report)} ${created}`,
-            kind: "info",
-          });
-          refreshDictionaries();
-          refreshTitles();
-          refreshTabs();
-          refreshProducts();
-          setRevision((n) => n + 1);
-          if (sheet.kind === "month") {
-            backend.journalMonth(sheet.month).then(setView).catch(report);
-          }
-        })
-        .catch(report)
-        .finally(() => {
-          setTaking(false);
-        });
-    },
-    [backend, sheet, refreshDictionaries, refreshTitles, refreshTabs, refreshProducts, report],
-  );
-
-  const onExchangeFolder = useCallback(
-    (folder: string | null) => {
-      writeExchangeFolder(folder);
-      setExchangeFolder(folder);
-      setPhoneLater(null);
-      if (folder === null) setExchange(null);
-      exchangeWith(folder);
-    },
-    [exchangeWith],
-  );
-
-  const phone = exchange?.phone ?? { state: "off" as const };
-  const phoneKey = JSON.stringify(phone);
-  const phoneShown =
-    phoneKey !== phoneLater &&
-    (phone.state === "changes" || phone.state === "needsPassword" || phone.state === "problem");
-
   const close = useCallback(() => {
     backend.vaultClose().then(onClose).catch(report);
   }, [backend, onClose, report]);
@@ -695,52 +587,6 @@ export function WorkbookScreen({ backend, file, onClose }: Props) {
       </header>
 
       <div className={styles.notices}>
-        {phoneShown && (
-          <div className={`${styles.notice} ${styles.phone}`} role="status">
-            <span className={styles.phoneTitle}>
-              {phone.state === "changes" ? "С телефона:" : "Телефон:"}
-            </span>
-            <p>
-              {phone.state === "changes" && bannerText(phone.report)}
-              {phone.state === "needsPassword" &&
-                "Файл с телефона не открывается паролем этого файла: пароль меняли, или Яндекс Диск ещё не докачал файл. Если пароль меняли, введите прежний."}
-              {phone.state === "problem" && problemText(phone.code)}
-            </p>
-            {phone.state === "needsPassword" && (
-              <input
-                type="password"
-                className={styles.phonePassword}
-                aria-label="Прежний пароль"
-                placeholder="Прежний пароль"
-                value={phonePassword}
-                onChange={(e) => {
-                  setPhonePassword(e.target.value);
-                }}
-              />
-            )}
-            {phone.state !== "problem" && (
-              <button
-                type="button"
-                className={styles.close}
-                disabled={taking || (phone.state === "needsPassword" && phonePassword === "")}
-                onClick={() => {
-                  takeFromPhone(phone.state === "needsPassword" ? phonePassword : null);
-                }}
-              >
-                {taking ? "Забираю…" : "Забрать"}
-              </button>
-            )}
-            <button
-              type="button"
-              className={styles.close}
-              onClick={() => {
-                setPhoneLater(phoneKey);
-              }}
-            >
-              {phone.state === "problem" ? "Скрыть" : "Позже"}
-            </button>
-          </div>
-        )}
         {notice !== null && (
           <div className={styles.notice} role="status">
             <span className={styles.noticeTitle}>Сроки:</span>
@@ -792,9 +638,6 @@ export function WorkbookScreen({ backend, file, onClose }: Props) {
         {settingsOpen && (
           <SettingsPage
             backend={backend}
-            exchangeFolder={exchangeFolder}
-            exchange={exchange}
-            onExchangeFolder={onExchangeFolder}
             view={prefs}
             onViewChange={(next) => {
               setPrefs(next);
