@@ -11,18 +11,41 @@ function groupThousands(digits: string): string {
   return digits.replace(/\B(?=(\d{3})+(?!\d))/g, NBSP);
 }
 
-/** 123456 → "1 234,56"; 120000 → "1 200"; −5000 → "−50". Kopecks are shown only when present. */
-export function formatMoney(kopecks: number): string {
+let alwaysKopecks = false;
+
+/**
+ * Sets the display mode for every `formatMoney` call: with `true` kopecks are always shown
+ * («1 200,00»). It is a per-computer view setting (settings/view.ts), applied by the workbook
+ * screen before it renders. The default is off.
+ */
+export function setAlwaysKopecks(on: boolean): void {
+  alwaysKopecks = on;
+}
+
+function render(kopecks: number, withKopecks: boolean): string {
   const sign = kopecks < 0 ? MINUS : "";
   const abs = Math.abs(kopecks);
   const rubles = groupThousands(Math.trunc(abs / 100).toString());
   const rest = abs % 100;
-  return rest === 0 ? `${sign}${rubles}` : `${sign}${rubles},${rest.toString().padStart(2, "0")}`;
+  return rest === 0 && !withKopecks
+    ? `${sign}${rubles}`
+    : `${sign}${rubles},${rest.toString().padStart(2, "0")}`;
 }
 
-/** The text placed into the cell editor: no grouping, so it is easy to change. */
+/**
+ * 123456 → "1 234,56"; 120000 → "1 200"; −5000 → "−50". Kopecks are shown only when present,
+ * unless the «always show kopecks» mode is on ("1 200,00").
+ */
+export function formatMoney(kopecks: number): string {
+  return render(kopecks, alwaysKopecks);
+}
+
+/**
+ * The text placed into the cell editor and the clipboard: no grouping, so it is easy to change,
+ * and independent of the display mode (1200, never 1200,00).
+ */
 export function moneyEditText(kopecks: number): string {
-  return formatMoney(kopecks).replaceAll(NBSP, "");
+  return render(kopecks, false).replaceAll(NBSP, "");
 }
 
 /**

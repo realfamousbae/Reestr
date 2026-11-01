@@ -12,12 +12,8 @@ model goes here, not into code). Newest first.
 - **Workbook «Служебный», column C.** It holds the words «да» / «нет» used by the
   `SUMIF(D…; Служебный!C2; G…)` formula for «Регулярные» — a vocabulary, not a per-category
   «regular» flag. Stage 1 import should not read it as `category.is_regular_default`.
-- **Row-number column header.** Glide's row markers cannot show a «№» title; the numbers are
-  there, the header is blank. Revisit if the author wants the label.
 - **Very fast synthetic input** (0 ms between click and keys) can lose the first character
   when typing opens the cell editor. Human typing is not affected; keep an eye on it.
-- **Amount display**: kopecks are shown only when non-zero («1 200» vs «1 234,50»). Make
-  «always show kopecks» a setting if the mixed look bothers the author.
 
 ## Found during stage 2
 

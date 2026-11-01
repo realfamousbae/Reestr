@@ -94,6 +94,18 @@ function ViewSection({
         </p>
       </div>
       <div className={styles.field}>
+        <label className={styles.check}>
+          <input
+            type="checkbox"
+            checked={view.alwaysKopecks}
+            onChange={(e) => {
+              onChange({ ...view, alwaysKopecks: e.target.checked });
+            }}
+          />
+          Всегда показывать копейки
+        </label>
+      </div>
+      <div className={styles.field}>
         <span id="blocks-label">Блоки справа на листе месяца</span>
         <ol className={styles.blocks} aria-labelledby="blocks-label">
           {view.order.map((id, i) => (
@@ -137,7 +149,11 @@ function ViewSection({
           type="button"
           className={styles.link}
           onClick={() => {
-            onChange({ ...DEFAULT_VIEW, fontSize: view.fontSize });
+            onChange({
+              ...DEFAULT_VIEW,
+              fontSize: view.fontSize,
+              alwaysKopecks: view.alwaysKopecks,
+            });
           }}
         >
           Вернуть порядок, как в книге
