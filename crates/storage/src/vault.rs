@@ -137,6 +137,10 @@ impl Vault {
 
     /// Keys the connection, checks the key and takes the exclusive lock.
     fn prepare(conn: Connection, path: &Path, password: &str) -> Result<Self, StorageError> {
+        // SQLCipher always wipes its own key material; this extends the wiping to all memory
+        // SQLite frees, such as decrypted pages with amounts and titles. The setting is global
+        // for the process and cannot be turned off, so it is on before the key is set.
+        conn.execute_batch("PRAGMA cipher_memory_security = ON;")?;
         // Fail at once instead of waiting when another process holds the file.
         conn.busy_timeout(Duration::ZERO)?;
         check_key(&conn, password)?;
@@ -226,6 +230,8 @@ pub enum CipherSetting {
     HmacAlgorithm,
     PageSize,
     Provider,
+    /// "1" once memory wiping is on and SQLite has allocated memory since.
+    MemorySecurity,
 }
 
 impl CipherSetting {
@@ -237,6 +243,7 @@ impl CipherSetting {
             Self::HmacAlgorithm => "cipher_hmac_algorithm",
             Self::PageSize => "cipher_page_size",
             Self::Provider => "cipher_provider",
+            Self::MemorySecurity => "cipher_memory_security",
         }
     }
 }
