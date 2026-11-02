@@ -365,6 +365,13 @@ fn products(vault: &mut Vault) -> Result {
                 product: gazprom,
                 edit: CreditInput::GraceDays(Some(100)),
             },
+            ProductOp::CreditTerms {
+                product: gazprom,
+                edit: CreditInput::ManualAvailable {
+                    amount: Some(rub(92_000)),
+                    on: Some(date("2026-12-18")),
+                },
+            },
             // Overdue, partly repaid.
             tranche(gazprom, "2026-08-10", "2026-11-18", 30_000),
             // Ends in four days: orange in «Сроки».

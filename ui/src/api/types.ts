@@ -423,6 +423,17 @@ export interface PurchaseView {
   manual: boolean;
 }
 
+export interface AvailableCheck {
+  on: string;
+  entered: Kopecks;
+  /** The debt on that day. */
+  debt: Kopecks;
+  /** Credit limit − debt, from the core. */
+  computed: Kopecks;
+  /** Entered − computed: above zero when the bank shows more. */
+  difference: Kopecks;
+}
+
 export interface CreditCardView {
   productId: number;
   card: string;
@@ -430,7 +441,12 @@ export interface CreditCardView {
   participant: string | null;
   creditLimit: Kopecks | null;
   graceDays: number | null;
+  /** The available balance the bank showed, with the day it was valid for; set together. */
+  manualAvailable: Kopecks | null;
+  manualAvailableOn: string | null;
   debt: Kopecks;
+  /** The entered balance against the computed one; null when there is nothing to compare. */
+  available: AvailableCheck | null;
   /** Purchases in no tranche: before the first one, or without a date. */
   unbound: number;
   /** Where a new repayment goes by default. */
@@ -487,7 +503,9 @@ export interface ProductsView {
 }
 
 export type CreditInput =
-  { field: "creditLimit"; value: Kopecks | null } | { field: "graceDays"; value: number | null };
+  | { field: "creditLimit"; value: Kopecks | null }
+  | { field: "graceDays"; value: number | null }
+  | { field: "manualAvailable"; value: { amount: Kopecks | null; on: string | null } };
 
 export type SavingsInput =
   | { field: "promoRate"; value: number | null }

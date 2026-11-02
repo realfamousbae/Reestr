@@ -144,7 +144,8 @@ product          id, bank_id, participant_id, kind (debit|credit|savings|deposit
                  short_name  ("Газпром КР", "ПСБ 3170" — как в таблице), full_name,
                  cashback_rounding (floor_rub|floor_kop|half_up_rub|half_up_kop; default floor_rub, D13),
                  is_active, opened_at, closed_at, notes
-credit_terms     product_id, credit_limit, default_grace_days (hint only, not a rule)
+credit_terms     product_id, credit_limit, default_grace_days (hint only, not a rule),
+                 manual_available, manual_available_on (entered from the bank, set together)
 grace_period     id, product_id, start_date, end_date, debt_adjustment (manual),
                  status (active|repaid|overdue), notes
                  -- "транш": one per statement; many overlapping per card (see §7)
@@ -226,7 +227,11 @@ change_log       id, ts, entity, entity_id, field, old_value, new_value
 - **Панель «Сроки»** (правая часть экрана месяца и отдельный экран): ближайшие окончания
   траншей, открытия НС, пользовательские напоминания. **Уведомления только внутри
   программы** (счётчик на вкладке «Сроки» + список при запуске); системные уведомления — не в MVP.
-- Остатки лимитов/балансов по кредиткам — вводятся вручную (как сейчас), с датой актуальности.
+- **Доступный остаток кредитки** вводится вручную, как его показывает банк, с датой, на которую
+  он верен (значение и дата — только вместе). Рядом Реестр показывает расчётный остаток на ту же
+  дату (кредитный лимит − долг на эту дату; покупки и погашения позже даты не считаются,
+  отрицательный остаток допустим) и расхождение (введённый − расчётный). Без лимита, значения или
+  даты сверки нет.
 
 ## 8. Интерфейс — «как в его Excel»
 

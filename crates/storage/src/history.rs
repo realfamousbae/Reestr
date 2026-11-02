@@ -139,7 +139,13 @@ impl Table {
                 "spent_adjustment",
                 "notes",
             ],
-            Self::CreditTerms => &["product_id", "credit_limit", "default_grace_days"],
+            Self::CreditTerms => &[
+                "product_id",
+                "credit_limit",
+                "default_grace_days",
+                "manual_available",
+                "manual_available_on",
+            ],
             Self::GracePeriod => &[
                 "product_id",
                 "start_date",

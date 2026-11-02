@@ -643,6 +643,8 @@ fn data_sheets(wb: &mut Workbook, book: &Book, names: &Names, s: &Styles) -> Res
             ("Закрыта", 12.0),
             ("Кредитный лимит", 14.0),
             ("Грейс, дней", 10.0),
+            ("Доступный остаток", 14.0),
+            ("Остаток на дату", 12.0),
             ("Ставка НС", 10.0),
             ("НС закрыт", 12.0),
             ("Открыть снова через, дней", 14.0),
@@ -668,6 +670,8 @@ fn data_sheets(wb: &mut Workbook, book: &Book, names: &Names, s: &Styles) -> Res
                         .map_or(Cell::Empty, |d| {
                             Cell::Int(i32::try_from(d).unwrap_or(i32::MAX))
                         }),
+                    Cell::money(c.and_then(|c| c.manual_available)),
+                    Cell::date(c.and_then(|c| c.manual_available_on)),
                     sv.and_then(|t| t.promo_rate)
                         .map_or(Cell::Empty, |r| Cell::Percent(i64::from(r.0))),
                     Cell::date(sv.and_then(|t| t.promo_closed_at)),

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { DeadlineView } from "../api";
 import {
+  availableCheckText,
   daysText,
   deadlineText,
   savingsText,
@@ -26,6 +27,26 @@ describe("product labels", () => {
     expect(daysText(21)).toBe("через 21 день");
     expect(daysText(-2)).toBe("просрочено на 2 дня");
     expect(daysText(-11)).toBe("просрочено на 11 дней");
+  });
+
+  it("words the check of the entered balance", () => {
+    const check = {
+      on: "2026-12-18",
+      entered: 9_200_000,
+      debt: 5_800_000,
+      computed: 9_200_000,
+      difference: 0,
+    };
+    const base = `На 18.12.2026: долг 58${NBSP}000 ₽, расчётный остаток 92${NBSP}000 ₽`;
+    expect(availableCheckText(check)).toBe(`${base}, совпадает с банком`);
+    expect(availableCheckText({ ...check, difference: 30_050 })).toBe(
+      `${base}, у банка на 300,50 ₽ больше`,
+    );
+    expect(availableCheckText({ ...check, difference: -100_000 })).toBe(
+      `${base}, у банка на 1${NBSP}000 ₽ меньше`,
+    );
+    // Debt above the limit: the balance is negative, shown as it is.
+    expect(availableCheckText({ ...check, computed: -500_000 })).toContain("остаток −5" + NBSP);
   });
 
   it("colors only states that matter", () => {

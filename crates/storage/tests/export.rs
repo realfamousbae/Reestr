@@ -9,8 +9,8 @@ use calamine::{Data, Reader, open_workbook_auto_from_rs};
 use reestr_core::date::parse_iso;
 use reestr_core::import::{CardSetup, Workbook, read_workbook};
 use reestr_core::{
-    DeadlineInput, EditInput, InflowInput, InflowOp, JournalOp, Kopecks, Month, ProductOp, RateBp,
-    RuleInput, RuleOp, TrancheInput, month_totals,
+    CreditInput, DeadlineInput, EditInput, InflowInput, InflowOp, JournalOp, Kopecks, Month,
+    ProductOp, RateBp, RuleInput, RuleOp, TrancheInput, month_totals,
 };
 use reestr_storage::Vault;
 use tempfile::TempDir;
@@ -161,6 +161,13 @@ fn filled(dir: &TempDir) -> Vault {
     let today = parse_iso("2026-10-27").unwrap();
     v.apply_products(
         vec![
+            ProductOp::CreditTerms {
+                product: otp,
+                edit: CreditInput::ManualAvailable {
+                    amount: Some(rub(41_500)),
+                    on: Some(parse_iso("2026-10-25").unwrap()),
+                },
+            },
             ProductOp::AddTranche {
                 product: otp,
                 edits: vec![
@@ -245,6 +252,24 @@ fn xlsx_reads_back_into_the_same_journal() {
     );
     assert_eq!(kopecks(rules.get_value((1, 8))), Some(rub(200).get()));
 
+    // «Карты»: the balance entered from the bank and its date, under their headers.
+    let cards_sheet = sheets.worksheet_range("Карты").unwrap();
+    let column = |title: &str| {
+        (0..cards_sheet.width() as u32)
+            .find(|c| cards_sheet.get_value((0, *c)) == Some(&Data::String(title.into())))
+            .unwrap()
+    };
+    let row = (0..cards_sheet.height() as u32)
+        .find(|r| cards_sheet.get_value((*r, 0)) == Some(&Data::String("Газпром КР".into())))
+        .unwrap();
+    assert_eq!(
+        kopecks(cards_sheet.get_value((row, column("Доступный остаток")))),
+        Some(rub(41_500).get())
+    );
+    // 25.10.2026 as an Excel serial date.
+    let on = cards_sheet.get_value((row, column("Остаток на дату")));
+    assert!(matches!(on, Some(Data::DateTime(d)) if d.as_f64() == 46_320.0));
+
     // Our import reads the export back: no warnings, its cashback total matches every month.
     let book = read_workbook(&bytes).unwrap();
     assert!(book.warnings.is_empty(), "{:?}", book.warnings);
@@ -322,6 +347,9 @@ fn json_carries_everything_stored() {
     assert_eq!(count("reminders"), 1);
     assert_eq!(doc["inflows"][0]["amount"], rub(95_000).get());
     assert_eq!(doc["incomePlans"][0]["amount"], rub(120_000).get());
+    assert_eq!(count("creditTerms"), 1);
+    assert_eq!(doc["creditTerms"][0]["manualAvailable"], rub(41_500).get());
+    assert_eq!(doc["creditTerms"][0]["manualAvailableOn"], "2026-10-25");
     // Stored data only: no computed totals and no change history (D31).
     assert!(doc.get("totals").is_none() && doc.get("changeLog").is_none());
     let rule_entry = doc["entries"]

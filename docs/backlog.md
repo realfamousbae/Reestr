@@ -25,8 +25,6 @@ model goes here, not into code). Newest first.
 
 - **Import of the right blocks** (PLAN §9 item 3, D25): the template's right blocks are empty,
   so there is nothing to recognize yet. Needs a real workbook or a sample of those blocks.
-- **Manual credit card balances with a date** (PLAN §7, last bullet): not in the data model
-  (§5). Add a field to `credit_terms` if the author wants it.
 
 ## Later
 

@@ -46,6 +46,7 @@ const MESSAGES: Record<string, string> = {
   days_not_positive: "Число дней должно быть больше нуля.",
   empty_title: "Напишите, о чём напоминание.",
   no_tranche: "У карты нет ни одного грейса — сначала добавьте его.",
+  available_without_date: "Доступный остаток и дата указываются вместе.",
   invalid_date: "Не удалось определить сегодняшнюю дату.",
   export_failed: "Не удалось собрать выгрузку.",
   phone_copy:

@@ -28,9 +28,10 @@ pub use journal::{EditError, EditInput, Entry, EntryEdit, EntryId, JournalOp};
 pub use money::Kopecks;
 pub use month::Month;
 pub use products::{
-    CreditInput, CreditTerms, CustomDeadline, Deadline, DeadlineId, DeadlineInput, DeadlineSource,
-    GraceId, GracePeriod, ProductError, ProductOp, Repayment, RepaymentId, RepaymentInput,
-    SavingsInput, SavingsState, SavingsTerms, TrancheInput, TrancheState, TrancheStatus, Urgency,
+    AvailableCheck, CreditInput, CreditTerms, CustomDeadline, Deadline, DeadlineId, DeadlineInput,
+    DeadlineSource, GraceId, GracePeriod, ProductError, ProductOp, Repayment, RepaymentId,
+    RepaymentInput, SavingsInput, SavingsState, SavingsTerms, TrancheInput, TrancheState,
+    TrancheStatus, Urgency,
 };
 pub use rules::{
     Allocation, CardSuggestion, CashbackRule, RuleError, RuleId, RuleInput, RuleOp, RuleUsage,

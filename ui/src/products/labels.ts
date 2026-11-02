@@ -1,6 +1,6 @@
 // Words for product states: tranche periods, days left, deadlines. Numbers come from the core.
 
-import type { DeadlineView, SavingsState, TrancheView } from "../api";
+import type { AvailableCheck, DeadlineView, SavingsState, TrancheView } from "../api";
 import { formatDate } from "../format/date";
 import { formatMoney } from "../format/money";
 import { plural } from "../format/text";
@@ -39,6 +39,17 @@ export function trancheTone(
   if (t.status === "overdue") return "danger";
   if (t.status === "active" && t.remaining > 0 && t.daysLeft <= 7) return "warn";
   return undefined;
+}
+
+/** «На 18.12.2026: долг 58 000 ₽, расчётный остаток 92 000 ₽, у банка на 300 ₽ больше». */
+export function availableCheckText(check: AvailableCheck): string {
+  const base =
+    `На ${formatDate(check.on)}: долг ${formatMoney(check.debt)} ₽, ` +
+    `расчётный остаток ${formatMoney(check.computed)} ₽`;
+  if (check.difference === 0) return `${base}, совпадает с банком`;
+  const more = check.difference > 0;
+  const gap = formatMoney(more ? check.difference : -check.difference);
+  return `${base}, у банка на ${gap} ₽ ${more ? "больше" : "меньше"}`;
 }
 
 export function savingsText(state: SavingsState): string {

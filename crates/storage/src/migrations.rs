@@ -252,6 +252,10 @@ pub(crate) const MIGRATIONS: &[&str] = &[
     "DROP TABLE phone_change;
     DROP TABLE phone_taken;
     DELETE FROM meta WHERE key IN ('file_id', 'snapshot_seq', 'role');",
+    // 9: the available balance the bank showed for a credit card, with the date it was valid
+    // for (PLAN §7). The core keeps them set together; the columns are written one at a time.
+    "ALTER TABLE credit_terms ADD COLUMN manual_available INTEGER;
+    ALTER TABLE credit_terms ADD COLUMN manual_available_on TEXT;",
 ];
 
 /// The schema version this build writes and reads.
@@ -410,5 +414,33 @@ mod tests {
         );
         // The old log stays as it was.
         assert_eq!(count("SELECT count(*) FROM change_log"), 2);
+    }
+
+    /// Version 9 adds the entered balance to the cards as they are: nothing entered yet.
+    #[test]
+    fn version_9_keeps_the_card_terms_and_leaves_the_balance_empty() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        for sql in &MIGRATIONS[..8] {
+            conn.execute_batch(sql).unwrap();
+        }
+        conn.pragma_update(None, "user_version", 8).unwrap();
+        conn.execute_batch(
+            "INSERT INTO product (short_name, name_key) VALUES ('Газпром КР', 'газпром кр');
+             INSERT INTO credit_terms (product_id, credit_limit, default_grace_days)
+                 VALUES (1, 15000000, 100);",
+        )
+        .unwrap();
+        migrate(&mut conn).unwrap();
+
+        assert_eq!(user_version(&conn).unwrap(), SCHEMA_VERSION);
+        let row: (i64, i64, Option<i64>, Option<String>) = conn
+            .query_row(
+                "SELECT credit_limit, default_grace_days, manual_available, manual_available_on
+                 FROM credit_terms WHERE product_id = 1",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
+            )
+            .unwrap();
+        assert_eq!(row, (15_000_000, 100, None, None));
     }
 }

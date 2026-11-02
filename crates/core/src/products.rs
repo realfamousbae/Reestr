@@ -31,6 +31,27 @@ pub struct CreditTerms {
     pub credit_limit: Option<Kopecks>,
     /// Only a hint for the end date of a new tranche.
     pub default_grace_days: Option<u32>,
+    /// The available balance the bank showed, entered by hand; set together with its date.
+    pub manual_available: Option<Kopecks>,
+    /// The day [`Self::manual_available`] was valid for.
+    #[serde(with = "crate::date::iso::option")]
+    pub manual_available_on: Option<Date>,
+}
+
+/// The balance entered from the bank against the one Reestr computes for the same day.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AvailableCheck {
+    #[serde(with = "crate::date::iso")]
+    pub on: Date,
+    /// What the bank showed.
+    pub entered: Kopecks,
+    /// The debt on that day.
+    pub debt: Kopecks,
+    /// Credit limit − debt; negative when the debt is above the limit.
+    pub computed: Kopecks,
+    /// `entered − computed`: above zero when the bank shows more than Reestr.
+    pub difference: Kopecks,
 }
 
 /// One tranche («транш»): purchases from its start until the next tranche starts, to be repaid
@@ -166,6 +187,64 @@ pub fn credit_debt(states: &[TrancheState], product: Option<ProductId>) -> Kopec
         .filter(|s| s.status != TrancheStatus::Repaid)
         .map(|s| s.remaining)
         .sum()
+}
+
+/// What was owed on a card by the end of `on`, however the tranches stand today: later purchases
+/// and repayments do not count, nor does the adjustment of a tranche that had not started. An
+/// undated purchase is in a tranche only by hand, and counts as it does in [`credit_debt`].
+pub fn credit_debt_on(
+    tranches: &[GracePeriod],
+    entries: &[Entry],
+    repayments: &[Repayment],
+    product: ProductId,
+    on: Date,
+) -> Kopecks {
+    // Later tranches stay: a purchase of that day may be bound to one by hand.
+    let tranches: Vec<GracePeriod> = tranches
+        .iter()
+        .cloned()
+        .map(|mut t| {
+            if t.start > on {
+                t.debt_adjustment = Kopecks::ZERO;
+            }
+            t
+        })
+        .collect();
+    let entries: Vec<Entry> = entries
+        .iter()
+        .filter(|e| e.date.is_none_or(|d| d <= on))
+        .cloned()
+        .collect();
+    let repayments: Vec<Repayment> = repayments
+        .iter()
+        .filter(|r| r.date <= on)
+        .cloned()
+        .collect();
+    let states = tranche_states(&tranches, &entries, &repayments, on);
+    credit_debt(&states, Some(product))
+}
+
+/// The check of the balance entered for a card; `None` until the card has a limit, a value and
+/// its date, as there is nothing to compare then.
+pub fn available_check(
+    product: ProductId,
+    terms: &CreditTerms,
+    tranches: &[GracePeriod],
+    entries: &[Entry],
+    repayments: &[Repayment],
+) -> Option<AvailableCheck> {
+    let limit = terms.credit_limit?;
+    let entered = terms.manual_available?;
+    let on = terms.manual_available_on?;
+    let debt = credit_debt_on(tranches, entries, repayments, product, on);
+    let computed = limit - debt;
+    Some(AvailableCheck {
+        on,
+        entered,
+        debt,
+        computed,
+        difference: entered - computed,
+    })
 }
 
 /// Dates for «Начался новый грейс»: from `today`, as long as the card terms say, else as long
@@ -381,6 +460,12 @@ pub fn deadlines(
 pub enum CreditInput {
     CreditLimit(Option<Kopecks>),
     GraceDays(Option<u32>),
+    /// The balance from the bank with its date: both, or neither to clear them.
+    ManualAvailable {
+        amount: Option<Kopecks>,
+        #[serde(with = "crate::date::iso::option")]
+        on: Option<Date>,
+    },
 }
 
 /// A change of a savings account's terms.
@@ -490,6 +575,8 @@ pub enum ProductError {
     EmptyTitle,
     #[error("the card has no tranche to take a repayment")]
     NoTranche,
+    #[error("an available balance and its date go together")]
+    AvailableWithoutDate,
 }
 
 impl CreditInput {
@@ -499,6 +586,9 @@ impl CreditInput {
                 Err(ProductError::NegativeLimit)
             }
             Self::GraceDays(Some(0)) => Err(ProductError::DaysNotPositive),
+            Self::ManualAvailable { amount, on } if amount.is_some() != on.is_some() => {
+                Err(ProductError::AvailableWithoutDate)
+            }
             _ => Ok(()),
         }
     }
@@ -580,6 +670,172 @@ mod tests {
             amount: rub(amount),
             notes: None,
         }
+    }
+
+    fn terms(limit: Option<i64>, entered: Option<i64>, on: Option<&str>) -> CreditTerms {
+        CreditTerms {
+            credit_limit: limit.map(rub),
+            default_grace_days: None,
+            manual_available: entered.map(rub),
+            manual_available_on: on.map(d),
+        }
+    }
+
+    /// A card with a 100 000 limit: 30 000 bought in June, 10 000 repaid on the 20th.
+    fn bank_card() -> (Vec<GracePeriod>, Vec<Entry>, Vec<Repayment>) {
+        (
+            vec![tranche(1, CARD, "2026-06-01", "2026-09-28")],
+            vec![purchase(1, CARD, Some("2026-06-10"), 30_000)],
+            vec![repayment(1, 1, "2026-06-20", 10_000)],
+        )
+    }
+
+    #[test]
+    fn the_entered_balance_matches_the_computed_one() {
+        let (t, e, r) = bank_card();
+        let terms = terms(Some(100_000), Some(80_000), Some("2026-06-25"));
+        let check = available_check(CARD, &terms, &t, &e, &r).unwrap();
+        assert_eq!(
+            check,
+            AvailableCheck {
+                on: d("2026-06-25"),
+                entered: rub(80_000),
+                debt: rub(20_000),
+                computed: rub(80_000),
+                difference: Kopecks::ZERO,
+            }
+        );
+    }
+
+    #[test]
+    fn the_difference_is_entered_minus_computed() {
+        let (t, e, r) = bank_card();
+        let more = terms(Some(100_000), Some(80_300), Some("2026-06-25"));
+        let check = available_check(CARD, &more, &t, &e, &r).unwrap();
+        assert_eq!((check.computed, check.difference), (rub(80_000), rub(300)));
+        let less = terms(Some(100_000), Some(79_000), Some("2026-06-25"));
+        let check = available_check(CARD, &less, &t, &e, &r).unwrap();
+        assert_eq!(check.difference, rub(-1000));
+    }
+
+    #[test]
+    fn only_what_happened_by_the_date_counts() {
+        let (t, mut e, mut r) = bank_card();
+        // On the date itself: counts. A day later: does not.
+        e.push(purchase(2, CARD, Some("2026-06-25"), 1_000));
+        e.push(purchase(3, CARD, Some("2026-06-26"), 7_000));
+        r.push(repayment(2, 1, "2026-06-25", 500));
+        r.push(repayment(3, 1, "2026-06-30", 4_000));
+        assert_eq!(
+            credit_debt_on(&t, &e, &r, CARD, d("2026-06-25")),
+            rub(20_500)
+        );
+        // Before the repayment the whole purchase is owed.
+        assert_eq!(
+            credit_debt_on(&t, &e, &r, CARD, d("2026-06-19")),
+            rub(30_000)
+        );
+        // Before any purchase nothing is owed.
+        assert_eq!(credit_debt_on(&t, &e, &r, CARD, d("2026-06-01")), rub(0));
+        let today = tranche_states(&t, &e, &r, d("2026-07-01"));
+        assert_eq!(credit_debt(&today, Some(CARD)), rub(23_500));
+    }
+
+    #[test]
+    fn a_later_tranche_counts_only_for_what_happened_by_the_date() {
+        let mut t = vec![
+            tranche(1, CARD, "2026-06-01", "2026-09-28"),
+            tranche(2, CARD, "2026-07-01", "2026-10-28"),
+        ];
+        t[1].debt_adjustment = rub(900);
+        // Bought in June, moved to the July tranche by hand: owed in June all the same.
+        let mut moved = purchase(1, CARD, Some("2026-06-10"), 5_000);
+        moved.grace_period_id = Some(2);
+        let e = [moved];
+        assert_eq!(
+            credit_debt_on(&t, &e, &[], CARD, d("2026-06-25")),
+            rub(5_000)
+        );
+        assert_eq!(
+            credit_debt_on(&t, &e, &[], CARD, d("2026-07-01")),
+            rub(5_900)
+        );
+    }
+
+    #[test]
+    fn another_cards_debt_and_undated_purchases() {
+        let (mut t, mut e, r) = bank_card();
+        t.push(tranche(2, OTHER, "2026-06-01", "2026-07-26"));
+        e.push(purchase(2, OTHER, Some("2026-06-10"), 9_000));
+        // Without a date it is in no tranche; bound by hand it is, as in today's debt.
+        e.push(purchase(3, CARD, None, 700));
+        assert_eq!(
+            credit_debt_on(&t, &e, &r, CARD, d("2026-06-25")),
+            rub(20_000)
+        );
+        e[2].grace_period_id = Some(1);
+        assert_eq!(
+            credit_debt_on(&t, &e, &r, CARD, d("2026-06-25")),
+            rub(20_700)
+        );
+    }
+
+    #[test]
+    fn debt_above_the_limit_gives_a_negative_balance() {
+        let (t, e, r) = bank_card();
+        let over = terms(Some(15_000), Some(-5_000), Some("2026-06-25"));
+        let check = available_check(CARD, &over, &t, &e, &r).unwrap();
+        assert_eq!((check.computed, check.difference), (rub(-5_000), rub(0)));
+    }
+
+    #[test]
+    fn no_comparison_without_a_limit_a_value_or_a_date() {
+        let (t, e, r) = bank_card();
+        for incomplete in [
+            terms(None, Some(80_000), Some("2026-06-25")),
+            terms(Some(100_000), None, Some("2026-06-25")),
+            terms(Some(100_000), Some(80_000), None),
+            CreditTerms::default(),
+        ] {
+            assert_eq!(available_check(CARD, &incomplete, &t, &e, &r), None);
+        }
+        // A limit of zero is a limit.
+        let zero = terms(Some(0), Some(0), Some("2026-06-25"));
+        let check = available_check(CARD, &zero, &t, &e, &r).unwrap();
+        assert_eq!(check.computed, rub(-20_000));
+    }
+
+    #[test]
+    fn the_balance_and_its_date_go_together() {
+        let input = |amount: Option<i64>, on: Option<&str>| CreditInput::ManualAvailable {
+            amount: amount.map(rub),
+            on: on.map(d),
+        };
+        assert_eq!(
+            input(Some(1), None).validate(),
+            Err(ProductError::AvailableWithoutDate)
+        );
+        assert_eq!(
+            input(None, Some("2026-06-25")).validate(),
+            Err(ProductError::AvailableWithoutDate)
+        );
+        assert_eq!(input(None, None).validate(), Ok(()));
+        // A bank can show a negative balance, and the date is not limited (like other dates).
+        assert_eq!(input(Some(-1), Some("2099-01-01")).validate(), Ok(()));
+
+        // As the UI sends them.
+        let read = |json: &str| serde_json::from_str::<CreditInput>(json).unwrap();
+        assert_eq!(
+            read(r#"{"field":"manualAvailable","value":{"amount":100,"on":"2026-06-25"}}"#),
+            CreditInput::ManualAvailable {
+                amount: Some(Kopecks(100)),
+                on: Some(d("2026-06-25")),
+            }
+        );
+        assert_eq!(
+            read(r#"{"field":"manualAvailable","value":{"amount":null,"on":null}}"#),
+            input(None, None)
+        );
     }
 
     /// A 120-day grace card: a new tranche every month, four alive at once.
@@ -689,6 +945,7 @@ mod tests {
         let terms = CreditTerms {
             credit_limit: Some(rub(150_000)),
             default_grace_days: Some(120),
+            ..CreditTerms::default()
         };
         assert_eq!(
             new_tranche_dates(&t, CARD, Some(&terms), today),

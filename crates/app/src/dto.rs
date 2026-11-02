@@ -4,12 +4,12 @@ use std::collections::{BTreeSet, HashMap};
 
 use reestr_core::date::format_iso;
 use reestr_core::{
-    CardSuggestion, CashbackRule, CashbackSource, Entry, EntryId, Kopecks, Month, MonthTotals,
-    RuleId, RuleUsage, month_totals,
+    AvailableCheck, DeadlineSource, GraceId, Inflow, InflowId, MonthBalance, ProductId,
+    RepaymentId, SavingsState, TrancheStatus, Urgency,
 };
 use reestr_core::{
-    DeadlineSource, GraceId, Inflow, InflowId, MonthBalance, ProductId, RepaymentId, SavingsState,
-    TrancheStatus, Urgency,
+    CardSuggestion, CashbackRule, CashbackSource, Entry, EntryId, Kopecks, Month, MonthTotals,
+    RuleId, RuleUsage, month_totals,
 };
 use reestr_storage::{
     COPIES_KEPT, CipherSetting, Created, Dictionaries, FileInfo, ImportReport, ProductsData,
@@ -478,7 +478,11 @@ pub struct CreditCardView {
     pub participant: Option<String>,
     pub credit_limit: Option<Kopecks>,
     pub grace_days: Option<u32>,
+    pub manual_available: Option<Kopecks>,
+    pub manual_available_on: Option<String>,
     pub debt: Kopecks,
+    /// The entered balance against the computed one, when there is something to compare.
+    pub available: Option<AvailableCheck>,
     pub unbound: usize,
     pub repayment_tranche: Option<GraceId>,
     pub tranches: Vec<TrancheView>,
@@ -557,7 +561,10 @@ impl ProductsView {
                     participant: participant(c.product_id),
                     credit_limit: c.terms.credit_limit,
                     grace_days: c.terms.default_grace_days,
+                    manual_available: c.terms.manual_available,
+                    manual_available_on: c.terms.manual_available_on.map(format_iso),
                     debt: c.debt,
+                    available: c.available,
                     unbound: c.unbound,
                     repayment_tranche: c.repayment_tranche,
                     tranches: c

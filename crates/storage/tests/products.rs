@@ -328,6 +328,140 @@ fn binding_by_hand_and_deleting_tranches() {
     ));
 }
 
+fn balance(card: i64, amount: Option<i64>, on: Option<&str>) -> ProductOp {
+    ProductOp::CreditTerms {
+        product: card,
+        edit: CreditInput::ManualAvailable {
+            amount: amount.map(rub),
+            on: on.map(d),
+        },
+    }
+}
+
+fn terms_of(v: &Vault, card: i64) -> (Option<Kopecks>, Option<Date>) {
+    let c = card_of(v, card, "2026-08-01");
+    (c.terms.manual_available, c.terms.manual_available_on)
+}
+
+#[test]
+fn the_entered_balance_is_checked_as_of_its_date() {
+    let dir = TempDir::new().unwrap();
+    let (mut v, card, _) = setup(&dir);
+    let today = d("2026-08-01");
+    v.apply_products(
+        vec![
+            ProductOp::AddTranche {
+                product: card,
+                edits: tranche("2026-07-01", "2026-09-28"),
+            },
+            balance(card, Some(92_000), Some("2026-07-15")),
+        ],
+        today,
+    )
+    .unwrap();
+    purchase(&mut v, "2026-07", Some("2026-07-10"), "Газпром КР", 8_000);
+    // Bought after the date of the balance: not in the check, but in the debt of today.
+    purchase(&mut v, "2026-07", Some("2026-07-20"), "Газпром КР", 5_000);
+
+    // No limit yet: nothing to compare, the entered value stays.
+    let c = card_of(&v, card, "2026-08-01");
+    assert_eq!(c.available, None);
+    assert_eq!(c.terms.manual_available, Some(rub(92_000)));
+
+    v.apply_products(
+        vec![ProductOp::CreditTerms {
+            product: card,
+            edit: CreditInput::CreditLimit(Some(rub(100_000))),
+        }],
+        today,
+    )
+    .unwrap();
+    let c = card_of(&v, card, "2026-08-01");
+    assert_eq!(c.debt, rub(13_000));
+    let check = c.available.unwrap();
+    assert_eq!(check.on, d("2026-07-15"));
+    assert_eq!(
+        (check.debt, check.computed, check.entered, check.difference),
+        (rub(8_000), rub(92_000), rub(92_000), rub(0))
+    );
+
+    // A repayment before the date raises the computed balance; the bank now shows less.
+    let id = c.tranches[0].id;
+    v.apply_products(
+        vec![ProductOp::AddRepayment {
+            product: card,
+            edits: vec![
+                RepaymentInput::Date(d("2026-07-12")),
+                RepaymentInput::Amount(rub(1_000)),
+                RepaymentInput::Tranche(id),
+            ],
+        }],
+        today,
+    )
+    .unwrap();
+    let check = card_of(&v, card, "2026-08-01").available.unwrap();
+    assert_eq!(
+        (check.computed, check.difference),
+        (rub(93_000), rub(-1_000))
+    );
+}
+
+#[test]
+fn a_balance_without_its_date_is_refused() {
+    let dir = TempDir::new().unwrap();
+    let (mut v, card, _) = setup(&dir);
+    let today = d("2026-08-01");
+    for half in [
+        balance(card, Some(1_000), None),
+        balance(card, None, Some("2026-07-15")),
+    ] {
+        assert!(matches!(
+            v.apply_products(vec![half], today),
+            Err(StorageError::Product(ProductError::AvailableWithoutDate))
+        ));
+    }
+    assert_eq!(terms_of(&v, card), (None, None));
+
+    // Clearing takes both away.
+    v.apply_products(vec![balance(card, Some(1_000), Some("2026-07-15"))], today)
+        .unwrap();
+    v.apply_products(vec![balance(card, None, None)], today)
+        .unwrap();
+    assert_eq!(terms_of(&v, card), (None, None));
+}
+
+/// Undo and redo bring back both fields, also when the first balance made the terms row.
+#[test]
+fn undo_and_redo_keep_the_balance_and_its_date() {
+    let dir = TempDir::new().unwrap();
+    let (mut v, card, _) = setup(&dir);
+    let today = d("2026-08-01");
+    let first = (Some(rub(1_000)), Some(d("2026-07-15")));
+    let second = (Some(rub(2_000)), Some(d("2026-07-20")));
+
+    v.apply_products(vec![balance(card, Some(1_000), Some("2026-07-15"))], today)
+        .unwrap();
+    assert_eq!(terms_of(&v, card), first);
+    v.undo().unwrap();
+    assert_eq!(terms_of(&v, card), (None, None));
+    v.redo().unwrap();
+    assert_eq!(terms_of(&v, card), first);
+
+    v.apply_products(vec![balance(card, Some(2_000), Some("2026-07-20"))], today)
+        .unwrap();
+    assert_eq!(terms_of(&v, card), second);
+    v.undo().unwrap();
+    assert_eq!(terms_of(&v, card), first);
+    v.redo().unwrap();
+    assert_eq!(terms_of(&v, card), second);
+
+    v.apply_products(vec![balance(card, None, None)], today)
+        .unwrap();
+    assert_eq!(terms_of(&v, card), (None, None));
+    v.undo().unwrap();
+    assert_eq!(terms_of(&v, card), second);
+}
+
 #[test]
 fn savings_and_the_deadlines_list() {
     let dir = TempDir::new().unwrap();

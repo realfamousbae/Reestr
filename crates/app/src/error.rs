@@ -76,6 +76,7 @@ impl From<StorageError> for CommandError {
                     ProductError::DaysNotPositive => "days_not_positive",
                     ProductError::EmptyTitle => "empty_title",
                     ProductError::NoTranche => "no_tranche",
+                    ProductError::AvailableWithoutDate => "available_without_date",
                 };
                 Self::new(code, message)
             }

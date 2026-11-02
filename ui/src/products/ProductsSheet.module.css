@@ -122,6 +122,20 @@
   border-bottom: 1px solid var(--ruling);
 }
 
+.check,
+.checkDiffers {
+  margin: 0;
+  padding: var(--s2) var(--s4);
+  border-bottom: 1px solid var(--ruling);
+  color: var(--ink-muted);
+  font-size: var(--text-s);
+}
+
+/* Color carries the state only (PLAN §8). */
+.checkDiffers {
+  color: var(--warn);
+}
+
 .primary {
   padding: var(--s1) var(--s3);
   border: 1px solid var(--accent);
