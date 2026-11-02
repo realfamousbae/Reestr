@@ -10,6 +10,15 @@ stays manual. The tables below record how long the runs take.
 | `ci.yml`            | ubuntu-latest  | push to `dev`, ready PR to `master`, by hand | 3–6 min (cached)                                                      |
 | `windows-build.yml` | windows-latest | manual, `v*` tags                            | 5–15 min (cached), 25–35 min first run (OpenSSL is built from source) |
 
+## When pushes and pull requests start nothing
+
+Until 2026-11-03 no push or pull request in this repository started a workflow on its own: every
+run was manual, although the workflows were active and their triggers were right. Disabling and
+enabling one workflow did not help. Turning Actions off and on for the repository fixed it at
+once: Settings → Actions → General, or `gh api -X PUT repos/realfamousbae/Reestr/actions/permissions`
+with `-F enabled=false`, then with `-F enabled=true -f allowed_actions=all`. After the first push
+to a new repository, check `gh run list` for an automatic run.
+
 ## Measured
 
 Add a row after notable runs (time of the run, cache hit or miss).
