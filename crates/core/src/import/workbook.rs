@@ -1,10 +1,10 @@
-//! Reading the source workbook: the «Служебный» sheet and the month sheets `MM.YY`.
+//! Reading an xlsx workbook: the «Служебный» sheet and the month sheets `MM.YY`.
 //!
 //! Month sheet layout (see `docs/reference/`): row 1 is the header, row 2 holds the column
 //! numbers 1–7 and the totals (`H2 = SUM(G…)`, `I2…U2 = SUMIF(C…; Служебный!Bn; G…)`,
 //! `V2 = SUMIF(D…; Служебный!C2; G…)`), data rows start at row 3 in columns A–J:
 //! `№ | Наименование | Назначение | Регулярная | Участник | Дата | Сумма | % | Кэшбэк | Карта`.
-//! Our export adds «MCC» in column K; the source sheets have no such column.
+//! Column K holds «MCC»; a sheet without it imports with empty codes.
 //! A label «Итого:» near row 7 sits next to the cashback total. Formula results are read as
 //! Excel cached them, so they can be compared with our own totals.
 
@@ -204,7 +204,7 @@ fn text(cell: Option<&Data>) -> Option<String> {
     (!s.is_empty()).then_some(s)
 }
 
-/// A number typed into a text column («3170»): without a trailing «.0».
+/// A number typed into a text column («7741»): without a trailing «.0».
 fn format_number(f: f64) -> String {
     let s = f.to_string();
     s.strip_suffix(".0").map_or(s.clone(), str::to_owned)
@@ -511,7 +511,7 @@ mod tests {
         assert_eq!(rate(Some(&Data::Float(5.0))), Some(RateBp(500)));
         assert_eq!(rate(Some(&Data::String("6%".into()))), Some(RateBp(600)));
         assert_eq!(rate(Some(&Data::Float(0.0))), None);
-        assert_eq!(text(Some(&Data::Float(3170.0))).as_deref(), Some("3170"));
+        assert_eq!(text(Some(&Data::Float(7741.0))).as_deref(), Some("7741"));
     }
 
     #[test]

@@ -238,7 +238,7 @@ export interface InflowView {
   notes: string | null;
 }
 
-/** What the export writes: the source workbook layout, or all the data as json. */
+/** What the export writes: the month sheets as xlsx, or all the data as json. */
 export type ExportFormat = "xlsx" | "json";
 
 export interface MonthView {

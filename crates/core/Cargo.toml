@@ -8,7 +8,7 @@ license.workspace = true
 publish.workspace = true
 
 [dependencies]
-# Reading the source .xlsx workbook (PLAN §9).
+# Reading .xlsx workbooks for the import (PLAN §9).
 calamine.workspace = true
 # Writing the xlsx export (PLAN §9, D29).
 rust_xlsxwriter.workspace = true

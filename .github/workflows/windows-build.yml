@@ -1,5 +1,6 @@
-# The Windows installer (.exe via NSIS, .msi via WiX). Windows minutes cost more (PLAN §16),
-# so it runs only by hand (Actions → Windows build → Run workflow) and on version tags.
+# The Windows installer (.exe via NSIS, .msi via WiX). A build takes 5–25 minutes and may publish
+# a release, so it runs only by hand (Actions → Windows build → Run workflow) and on version tags
+# (PLAN §16, D36, D42).
 # Every run uploads the installers as workflow artifacts. A `v*` tag, or a manual run with
 # «release» filled in, also publishes a GitHub release with them (D35); the release is made
 # only after the build succeeds.

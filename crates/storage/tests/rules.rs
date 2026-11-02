@@ -435,14 +435,14 @@ fn rent_is_out_of_the_cashback_rate() {
     assert_eq!(excluded, [("Квартплата", Some("квартиры"))]);
 }
 
-/// D23: a month of the family's kind with limits worked out by hand.
+/// D23: a synthetic month with limits worked out by hand.
 ///
 /// Rules of 07.26:
 /// - Райф А, продукты 5%, spending up to 15 000 ₽, adjustment 2 000 ₽ (bought in the bank's
 ///   app, not in the journal);
 /// - Райф А, на всё 1%;
 /// - Газпром КР, еда 10%, at most 300 ₽ of cashback;
-/// - ПСБ 3170, на всё 3%, rounding to kopecks.
+/// - ПСБ 7741, на всё 3%, rounding to kopecks.
 #[test]
 fn acceptance_month_with_hand_computed_limits() {
     let dir = TempDir::new().unwrap();
@@ -459,20 +459,20 @@ fn acceptance_month_with_hand_computed_limits() {
             groceries,
             rule("Райф А", None, 100),
             cafe,
-            rule("ПСБ 3170", None, 300),
+            rule("ПСБ 7741", None, 300),
         ],
     );
     let d = v.dictionaries().unwrap();
-    let mts = d
+    let psb = d
         .products
         .iter()
-        .find(|p| p.short_name == "ПСБ 3170")
+        .find(|p| p.short_name == "ПСБ 7741")
         .unwrap()
         .id;
     v.edit_dictionary(
         DictKind::Product,
         vec![DictOp::Edit {
-            id: mts,
+            id: psb,
             edit: reestr_core::DictInput::Rounding(reestr_core::Rounding::FloorKop),
         }],
     )
@@ -495,9 +495,9 @@ fn acceptance_month_with_hand_computed_limits() {
         ("еда", "Газпром КР", Kopecks(30_000)),  // 0 ₽
         // Газпром КР has no rule for transport.
         ("транспорт", "Газпром КР", Kopecks(250_000)), // none
-        // ПСБ 3170: 3% of everything, to kopecks.
-        ("автомобиль", "ПСБ 3170", Kopecks(351_275)), // 105,3825 → 105,38 ₽
-        ("квартиры", "ПСБ 3170", Kopecks(784_000)),   // 235,20 ₽
+        // ПСБ 7741: 3% of everything, to kopecks.
+        ("автомобиль", "ПСБ 7741", Kopecks(351_275)), // 105,3825 → 105,38 ₽
+        ("квартиры", "ПСБ 7741", Kopecks(784_000)),   // 235,20 ₽
     ];
     let ids: Vec<i64> = rows
         .iter()

@@ -11,7 +11,7 @@
   const RULES = [
     { card: "Райф А", purpose: "продукты", rateBp: 500, limit: 100000 },
     { card: "Газпром КР", purpose: "транспорт", rateBp: 500, limit: 50000 },
-    { card: "ПСБ 3170", purpose: "еда", rateBp: 300, limit: null },
+    { card: "ПСБ 7741", purpose: "еда", rateBp: 300, limit: null },
     { card: "Почта А", purpose: "одежда", rateBp: 500, limit: 30000 },
     { card: "Совком А", purpose: null, rateBp: 100, limit: null },
   ];
@@ -34,7 +34,7 @@
       amount: 249622,
       card: "Газпром КР",
     },
-    { name: "Кафе", purpose: "еда", who: "Андрей", day: 9, amount: 120012, card: "ПСБ 3170" },
+    { name: "Кафе", purpose: "еда", who: "Андрей", day: 9, amount: 120012, card: "ПСБ 7741" },
     { name: "Куртка", purpose: "одежда", who: "Марина", day: 12, amount: 600000, card: "Почта А" },
     { name: "Лента", purpose: "продукты", who: "Андрей", day: 15, amount: 534400, card: "Райф А" },
     { name: "Семена", purpose: "дача", who: "Марина", day: 18, amount: 328200, card: "Совком А" },

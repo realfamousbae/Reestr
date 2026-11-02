@@ -1,4 +1,4 @@
-//! Export of a file (PLAN §9, D29–D31): an xlsx workbook laid out like the source workbook, and a
+//! Export of a file (PLAN §9, D29–D31): an xlsx workbook laid out like the month sheets (§8), and a
 //! json document with everything the file stores. Both are written from a [`Book`] that the
 //! storage gathers; nothing here reads a database or the clock.
 
@@ -60,7 +60,7 @@ pub struct Book {
     pub repayments: Vec<Repayment>,
     pub savings_terms: Vec<(ProductId, SavingsTerms)>,
     pub reminders: Vec<CustomDeadline>,
-    /// «Свод» of every year with entries, by groups like the source sheet.
+    /// «Свод» of every year with entries, by groups.
     pub years: Vec<YearSummary>,
     pub card_suggestions: bool,
 }

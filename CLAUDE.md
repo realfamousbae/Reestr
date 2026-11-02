@@ -1,8 +1,9 @@
 # CLAUDE.md — rules for working on Reestr
 
-Reestr is a desktop family-budget app (Tauri 2 + Rust core + React UI) that replaces a household
-Excel workbook (its layout is reproduced by `tools/fixtures/make_workbook.py`). `PLAN.md` is the
-source of truth; this file condenses the rules from its §8, §10, §15 and §16.
+Reestr is a desktop family-budget app (Tauri 2 + Rust core + React UI): a monthly spending
+journal laid out like a spreadsheet, with cards and cashback. `tools/fixtures/make_workbook.py`
+builds test workbooks in its xlsx layout. `PLAN.md` is the source of truth; this file condenses
+the rules from its §8, §10, §15 and §16.
 
 - Test data, fixtures, examples and screenshots are fictional only (participants Андрей and
   Марина, made-up cards). Never commit real names, card digits, amounts or files of real people.
@@ -48,9 +49,9 @@ source of truth; this file condenses the rules from its §8, §10, §15 and §16
 
 ## UI (§8)
 
-- The month screen mirrors the source workbook's sheet: same columns in the same order
+- The month screen is a spreadsheet sheet with fixed columns in this order
   (`№ | Наименование | Назначение | Регулярная | Участник | Дата | Сумма | % | Кэшбэк | Карта |
-MCC`; MCC is ours, the workbook has no such column),
+MCC`),
   category totals above the journal, blocks on the right, month tabs `MM.YY`, a «Свод» sheet.
   Changing column/block order requires an explicit decision by the author.
 - Excel feel: Enter/Tab/arrows, `Ctrl+Z`, paste ranges from clipboard, new row always at the
@@ -77,16 +78,17 @@ MCC`; MCC is ours, the workbook has no such column),
 - Dev machine is a MacBook Air M2 / 8 GB: Windows builds only in CI, no heavy emulators.
 - In a cloud session there is no Tauri window: verify via `cargo test`, `cargo clippy`,
   `cargo fmt --check`, `tsc`, `eslint`, `vitest`.
-- GitHub Actions minutes are limited (Windows counts ×2):
-  - `ci.yml` (ubuntu): tests, clippy (including the Tauri crate), tsc, vitest — only on a
-    ready (not draft) `pull_request` to `master` and by hand; not on pushes, not on docs-only
+- The repository is public, so standard GitHub runners are free (D42). Windows builds are still
+  slow and publish releases:
+  - `ci.yml` (ubuntu): tests, clippy (including the Tauri crate), tsc, vitest — on every push to
+    `dev`, on a ready (not draft) `pull_request` to `master` and by hand; not on docs-only
     changes. The default branch is `master`.
   - `windows-build.yml` (windows): full Tauri `.exe`/`.msi` — `workflow_dispatch` and `v*` tags
     only, never on every PR.
-  - **D36: CI and builds only for large changes.** Small changes gather on the working branch
-    without a pull request and are checked locally before every push. A pull request (and so
-    CI) is opened when a large change is ready. Windows builds and releases run only
-    when the author says so.
+  - **D36, changed by D42.** Small changes gather on the working branch without a pull request
+    and are checked locally before every push; CI then checks the push. A pull request is
+    opened when a large change is ready. Windows builds and releases run only when the author
+    says so.
   - All use caches (`Swatinem/rust-cache`, pnpm) and `concurrency` with `cancel-in-progress`.
 - `cargo test` and `vitest` must be green before opening a PR.
 - Tests are meaningful: money, cashback, grace periods, import. UI tests only for pure

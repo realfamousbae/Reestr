@@ -46,7 +46,7 @@
   color: var(--accent);
 }
 
-/* «Справочники» stands apart from the months, like the source «Служебный» sheet. */
+/* «Справочники» stands apart from the months. */
 .service {
   margin-left: var(--s4);
   border-left: 1px solid var(--ruling);

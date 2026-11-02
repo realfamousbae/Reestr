@@ -6,7 +6,7 @@
 //!
 //! Rounding, both ends fixed so the screen is reproducible:
 //! - cashback: [`Rounding::default()`] (whole rubles, down), what the cashback rules of a new
-//!   card use and what the source workbook does, via [`cashback_for`];
+//!   card use, via [`cashback_for`];
 //! - interest: half away from zero to the kopeck, like a bank statement.
 //!
 //! Overflow: the arithmetic runs in `i128` and the input is bounded ([`MAX_AMOUNT`],
@@ -187,9 +187,9 @@ mod tests {
 
     #[test]
     fn cashback_rounds_down_to_rubles_and_interest_half_up_to_kopecks() {
-        // 2 234 ₽ × 6% = 134,04 ₽ → 134 ₽ (the default rounding of the cashback rules).
-        let r = compare(input(rub(2234), 600, 0, 10)).unwrap();
-        assert_eq!(r.cashback, rub(134));
+        // 3 181 ₽ × 5% = 159,05 ₽ → 159 ₽ (the default rounding of the cashback rules).
+        let r = compare(input(rub(3181), 500, 0, 10)).unwrap();
+        assert_eq!(r.cashback, rub(159));
         // 1 000 ₽ at 12,5% for 1 day: 100 000 × 1250 / 3 650 000 = 34,246… kop → 34.
         assert_eq!(interest_for(rub(1000), RateBp(1250), 1), Kopecks(34));
         // 100 kop at 1% for 73 days is 0,2 kop → 0; at 10% it is exactly 2 kop.

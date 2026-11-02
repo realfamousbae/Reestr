@@ -52,7 +52,7 @@ fn imported_totals_match_the_sheets_and_reimport_adds_nothing() {
         .filter(|c| c.is_new)
         .map(|c| c.name.as_str())
         .collect();
-    // The default categories of a new file are the workbook's; only «кино» is new.
+    // The fixture uses the default categories of a new file; only «кино» is new.
     assert_eq!(new_categories, ["кино"]);
     assert!(preview.groups.iter().all(|g| !g.is_new));
     let otp = preview

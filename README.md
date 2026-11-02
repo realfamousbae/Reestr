@@ -1,7 +1,7 @@
 # Reestr (Реестр)
 
-A desktop family-budget app that replaces a hand-made Excel workbook: a monthly spending
-journal, bank cards and cashback, all in one encrypted file. Tauri 2 + Rust core + React UI.
+A desktop family-budget app laid out like a spreadsheet: a monthly spending journal, bank
+cards and cashback, all in one encrypted file. Tauri 2 + Rust core + React UI.
 Windows builds; development works on macOS and Linux too.
 
 `PLAN.md` is the project plan (in Russian), `CLAUDE.md` the short rules.
@@ -10,12 +10,12 @@ Windows builds; development works on macOS and Linux too.
 
 ```
 crates/core     domain and business logic: money, cashback and its rules, dictionaries,
-                journal, totals, reading the old xlsx workbook (no SQL, no Tauri)
+                journal, totals, xlsx import and export (no SQL, no Tauri)
 crates/storage  the encrypted .reestr file: SQLCipher, migrations, change log and undo, import
 crates/app      Tauri app: thin commands between the UI and core/storage
 ui/             React + TypeScript UI (Vite), the month grid on Glide Data Grid
 tools/fixtures  generator of the synthetic workbook used by the import tests
-docs/           reference workbook, backlog, CI budget
+docs/           backlog, CI budget
 site/           the user manual (Astro Starlight, Russian)
 landing/        the landing page with the download buttons (static HTML, Caddy on Railway)
 ```

@@ -1,8 +1,19 @@
 diff --git a/dist/cjs/data-editor/data-editor.js b/dist/cjs/data-editor/data-editor.js
-index 081f3b38d82107204ac3f3620d6724ffad01b43f..0a19d28e72804a6e5e67b3456e745d680218f407 100644
+index 081f3b38d82107204ac3f3620d6724ffad01b43f..f80709c10fc364bbde4871d17fa6d3e622006757 100644
 --- a/dist/cjs/data-editor/data-editor.js
 +++ b/dist/cjs/data-editor/data-editor.js
-@@ -2121,7 +2121,7 @@ const DataEditorImpl = (p, forwardedRef) => {
+@@ -55,7 +55,9 @@ const color_parser_js_1 = require("../internal/data-grid/color-parser.js");
+ const math_js_1 = require("../common/math.js");
+ const event_args_js_1 = require("../internal/data-grid/event-args.js");
+ const data_editor_keybindings_js_1 = require("./data-editor-keybindings.js");
+-const DataGridOverlayEditor = React.lazy(async () => await import("../internal/data-grid-overlay-editor/data-grid-overlay-editor.js"));
++// Required up front, not with React.lazy: while a lazy editor loads, the keys typed into the
++// first cell edit of a session went to the grid and only the last one was kept.
++const DataGridOverlayEditor = require("../internal/data-grid-overlay-editor/data-grid-overlay-editor.js").default;
+ // There must be a better way
+ let idCounter = 0;
+ function getSpanStops(cells) {
+@@ -2121,7 +2123,7 @@ const DataEditorImpl = (p, forwardedRef) => {
              !event.ctrlKey &&
              gridSelection.current !== undefined &&
              event.key.length === 1 &&
@@ -56,10 +67,21 @@ index afb6c66147f1b283fe9bb0ca4d20706731900394..97dd50949d2e58c181970a3ee7b9aed5
          showSearch,
          isAnimatingOut,
 diff --git a/dist/esm/data-editor/data-editor.js b/dist/esm/data-editor/data-editor.js
-index ec05aa9866c70032fc5509ff557cb8c542e384ed..d2e36792bfde17c33534720a834714fa8870aee9 100644
+index ec05aa9866c70032fc5509ff557cb8c542e384ed..f6896d8fc683a3fcf7bd97124f88fbfeb351a1fa 100644
 --- a/dist/esm/data-editor/data-editor.js
 +++ b/dist/esm/data-editor/data-editor.js
-@@ -2092,7 +2092,7 @@ const DataEditorImpl = (p, forwardedRef) => {
+@@ -26,7 +26,9 @@ import { withAlpha } from "../internal/data-grid/color-parser.js";
+ import { combineRects, getClosestRect, pointInRect } from "../common/math.js";
+ import { groupHeaderKind, outOfBoundsKind, headerKind, mouseEventArgsAreEqual, } from "../internal/data-grid/event-args.js";
+ import { useKeybindingsWithDefaults } from "./data-editor-keybindings.js";
+-const DataGridOverlayEditor = React.lazy(async () => await import("../internal/data-grid-overlay-editor/data-grid-overlay-editor.js"));
++// Imported up front, not with React.lazy: while a lazy editor loads, the keys typed into the
++// first cell edit of a session went to the grid and only the last one was kept.
++import DataGridOverlayEditor from "../internal/data-grid-overlay-editor/data-grid-overlay-editor.js";
+ // There must be a better way
+ let idCounter = 0;
+ function getSpanStops(cells) {
+@@ -2092,7 +2094,7 @@ const DataEditorImpl = (p, forwardedRef) => {
              !event.ctrlKey &&
              gridSelection.current !== undefined &&
              event.key.length === 1 &&

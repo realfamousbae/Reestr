@@ -1,6 +1,6 @@
 //! «Свод» (PLAN §8) and the month's «Приход / расход / дельта»: spending against the income
-//! plan («Оклад»), by months of a year, with the year's sums, shares, averages and the growth
-//! against the year before — the «Свод» sheet of the source workbook, computed here rather than by formulas.
+//! plan, by months of a year, with the year's sums, shares, averages and the growth against
+//! the year before — computed here rather than by formulas.
 
 use std::collections::HashMap;
 
@@ -81,7 +81,7 @@ pub struct SummaryRow {
     pub has_data: bool,
     /// «Сумма».
     pub total: Kopecks,
-    /// «Оклад».
+    /// «План дохода».
     pub plan: Option<Kopecks>,
     /// «Баланс в мес.»: plan − total.
     pub balance: Option<Kopecks>,

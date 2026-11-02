@@ -74,7 +74,7 @@ pub struct Product {
     pub participant_id: Option<ParticipantId>,
     /// `None` until the user says what it is (a card typed into the journal for the first time).
     pub kind: Option<ProductKind>,
-    /// As in the workbook: «Газпром КР», «ПСБ 3170».
+    /// As typed in the «Карта» column: «Газпром КР», «ПСБ 7741».
     pub short_name: String,
     pub full_name: Option<String>,
     /// How cashback is rounded for this product (D13).
@@ -230,8 +230,8 @@ pub fn name_key(name: &str) -> String {
         .replace('ё', "е")
 }
 
-/// Categories a new file starts with: the «Служебный» sheet of the workbook, in the column
-/// order of its month header, with the groups of its merged columns. All editable.
+/// Categories a new file starts with, in the column order of the month header, with the
+/// groups of its merged totals columns. All editable.
 /// Each item is (category, group).
 pub const DEFAULT_CATEGORIES: &[(&str, Option<&str>)] = &[
     ("еда", None),
@@ -255,8 +255,8 @@ pub const DEFAULT_CATEGORIES: &[(&str, Option<&str>)] = &[
 /// The category of row 3 of a month sheet — rent (D16).
 pub const RENT_CATEGORY: &str = "квартиры";
 
-/// The regular payment of row 3 — rent. New files have it, out of «Ср. %» (D37), as the
-/// workbook formula `M7/(H2−G3)` leaves row 3 out.
+/// The regular payment of row 3 — rent. New files have it, out of «Ср. %» (D37); in the xlsx
+/// layout `M7/(H2−G3)` leaves row 3 out.
 pub const RENT_TITLE: &str = "Квартплата";
 
 #[cfg(test)]

@@ -1,6 +1,6 @@
 //! Inflows, the income plan and «Свод» (PLAN §8, stage 3b). The acceptance test compares «Свод»
-//! of 2026 with the source sheet, computed by LibreOffice from its formulas, wherever the
-//! sheet has no error.
+//! of 2026 with the fixture's «Свод» sheet, computed by LibreOffice from its formulas, wherever
+//! the sheet has no error.
 
 use std::io::Cursor;
 use std::path::PathBuf;
@@ -218,7 +218,7 @@ fn summary_2026_matches_his_sheet() {
         })
         .collect();
     v.import_workbook(&book, &cards).unwrap();
-    // «Оклад» 55 000 in every month of the sheet: set once, it carries over.
+    // «План дохода» 55 000 in every month of the sheet: set once, it carries over.
     v.set_plan(m("2025-01"), Some(rub(55_000))).unwrap();
     let ours = v.year_summary(2026, true).unwrap();
 
@@ -255,7 +255,7 @@ fn summary_2026_matches_his_sheet() {
         let r = header + 1 + i as u32;
         let what = |col: &str| format!("{} {col}", row.month);
         check.money(&what("Сумма"), cached(&range, r, d), Some(row.total));
-        check.money(&what("Оклад"), cached(&range, r, e), row.plan);
+        check.money(&what("План дохода"), cached(&range, r, e), row.plan);
         check.rate(&what("Прирост"), cached(&range, r, f), row.growth_bp);
         for (c, amount) in row.columns.iter().enumerate().take(sheet_columns.len()) {
             check.money(
@@ -377,7 +377,7 @@ fn summary_2026_matches_his_sheet() {
     );
 
     assert!(check.mismatches.is_empty(), "{:#?}", check.mismatches);
-    // Every cell of the 2026 block without an error: 12 months × (Сумма, Оклад, 13 columns,
+    // Every cell of the 2026 block without an error: 12 months × (Сумма, План дохода, 13 columns,
     // Регулярные, Кешбек, Общий баланс, %), the growth of January and July (the only months
     // 2025 has), and the footer: the average month and the year's total, 13 columns × (sum,
     // share, average), «Регулярные» and «Кешбек» × 3, the year's overall balance. The growth

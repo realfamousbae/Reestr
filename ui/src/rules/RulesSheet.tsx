@@ -23,7 +23,7 @@ interface Props {
 /**
  * The cashback rules of a month (PLAN §6): what each card pays for which MCC or category, its
  * limits, and what is used of them by the journal. Rules for a new month start as a copy of the
- * previous month's, like a new sheet of the source workbook.
+ * previous month's.
  */
 export function RulesSheet({
   view,

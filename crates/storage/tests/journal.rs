@@ -63,7 +63,7 @@ fn purchase(title: &str, category: &str, who: &str, card: &str, amount: i64) -> 
 }
 
 #[test]
-fn new_files_start_with_the_workbook_categories() {
+fn new_files_start_with_the_default_categories() {
     let dir = TempDir::new().unwrap();
     let v = new_vault(&dir);
     let d = v.dictionaries().unwrap();
@@ -186,7 +186,7 @@ fn cashback_uses_the_rounding_of_the_card() {
             EditInput::Rate(Some(RateBp(350))),
         ],
     );
-    // Default: down to whole rubles, like the workbook.
+    // Default: down to whole rubles.
     assert_eq!(entry(&v, id).cashback_amount(), Kopecks(4300));
 
     let card = v.dictionaries().unwrap().products[0].id;

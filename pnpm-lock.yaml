@@ -6,7 +6,7 @@ settings:
 
 patchedDependencies:
   '@glideapps/glide-data-grid@6.0.3':
-    hash: 4717ca31c027917c535b4e8bbd3cec84691bcc615632b5bac537b7f461299517
+    hash: 0f830370cda26821274712cfe2f4d9b7b51d27757654a87bb20661855455680a
     path: patches/@glideapps__glide-data-grid@6.0.3.patch
 
 importers:
@@ -39,7 +39,7 @@ importers:
         version: 5.3.0
       '@glideapps/glide-data-grid':
         specifier: 6.0.3
-        version: 6.0.3(patch_hash=4717ca31c027917c535b4e8bbd3cec84691bcc615632b5bac537b7f461299517)(lodash@4.18.1)(marked@4.3.0)(react-dom@18.3.1(react@18.3.1))(react-responsive-carousel@3.2.23)(react@18.3.1)
+        version: 6.0.3(patch_hash=0f830370cda26821274712cfe2f4d9b7b51d27757654a87bb20661855455680a)(lodash@4.18.1)(marked@4.3.0)(react-dom@18.3.1(react@18.3.1))(react-responsive-carousel@3.2.23)(react@18.3.1)
       '@tauri-apps/api':
         specifier: 2.12.4
         version: 2.12.4
@@ -2915,7 +2915,7 @@ snapshots:
 
   '@fontsource/pt-sans@5.3.0': {}
 
-  '@glideapps/glide-data-grid@6.0.3(patch_hash=4717ca31c027917c535b4e8bbd3cec84691bcc615632b5bac537b7f461299517)(lodash@4.18.1)(marked@4.3.0)(react-dom@18.3.1(react@18.3.1))(react-responsive-carousel@3.2.23)(react@18.3.1)':
+  '@glideapps/glide-data-grid@6.0.3(patch_hash=0f830370cda26821274712cfe2f4d9b7b51d27757654a87bb20661855455680a)(lodash@4.18.1)(marked@4.3.0)(react-dom@18.3.1(react@18.3.1))(react-responsive-carousel@3.2.23)(react@18.3.1)':
     dependencies:
       '@linaria/react': 4.5.4(react@18.3.1)
       canvas-hypertxt: 1.0.3

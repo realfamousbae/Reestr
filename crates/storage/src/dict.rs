@@ -187,7 +187,7 @@ pub(crate) fn seed_defaults(conn: &Connection) -> Result<(), StorageError> {
             params![name, name_key(name), group_id, order],
         )?;
     }
-    // Rent, row 3 of the source sheet (D16), stays out of «Ср. %» (D37).
+    // Rent, row 3 of a month sheet (D16), stays out of «Ср. %» (D37).
     conn.execute(
         "INSERT INTO regular_template (title, category_id, sort_order, exclude_from_rate)
          VALUES (?1, (SELECT id FROM category WHERE name_key = ?2), 1, 1)",

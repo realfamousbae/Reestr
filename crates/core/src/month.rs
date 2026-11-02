@@ -1,4 +1,4 @@
-//! A calendar month — the unit of the journal (one sheet `MM.YY` in the source workbook).
+//! A calendar month — the unit of the journal (one sheet `MM.YY` in the xlsx).
 
 use std::fmt;
 use std::str::FromStr;
@@ -40,7 +40,7 @@ impl Month {
         }
     }
 
-    /// Parses a sheet name of the workbook, `MM.YY`, e.g. `07.26` → 2026-07.
+    /// Parses a month sheet name, `MM.YY`, e.g. `07.26` → 2026-07.
     pub fn parse_sheet_name(name: &str) -> Result<Self, InvalidMonth> {
         let invalid = || InvalidMonth(name.to_owned());
         let (mm, yy) = name.trim().split_once('.').ok_or_else(invalid)?;

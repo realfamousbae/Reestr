@@ -69,7 +69,7 @@ export function complete(typed: string, history: readonly string[]): string | nu
 const YES = new Set(["да", "д", "yes", "y", "1", "+", "true", "x", "х", "✓", "v"]);
 const NO = new Set(["нет", "н", "no", "n", "0", "-", "false", ""]);
 
-/** A yes/no column: "да" / "нет" as in the workbook, plus common shorthands. */
+/** A yes/no column: "да" / "нет", plus common shorthands. */
 export function parseYesNo(input: string, column = "Регулярная"): Parsed<boolean> {
   const text = input.trim().toLocaleLowerCase("ru");
   if (YES.has(text)) {

@@ -27,9 +27,9 @@ function Cell({
 }
 
 /**
- * The sums row above the journal, like the header of the source sheet. «Итого» stays on the
- * left and «Регулярные» on the right; categories scroll in between when the window is narrow.
- * Cashback is a block on the right of the sheet, as in the workbook (D22).
+ * The sums row above the journal. «Итого» stays on the left and «Регулярные» on the right;
+ * categories scroll in between when the window is narrow. Cashback is a block on the right of
+ * the sheet (D22).
  */
 export function TotalsBar({ totals, grouped, onGroupedChange }: Props) {
   const columns = grouped ? totals.byGroup : totals.byCategory;

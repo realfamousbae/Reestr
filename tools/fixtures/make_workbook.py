@@ -8,8 +8,8 @@ the file carries Excel-style cached totals that our import is checked against to
 (PLAN §12, stages 1 and 3).
 
 With `--summary` it builds the fixture of the «Свод» acceptance test: every month of 2026 has a
-sheet, so the 2026 block of «Свод» resolves; 2025 has only some of its months, as an old
-workbook would.
+sheet, so the 2026 block of «Свод» resolves; 2025 has only some of its months, so its block has
+#REF! cells.
 
 Requirements (only to regenerate the fixtures, not for CI): Python 3 (standard library only) and
 LibreOffice (`soffice`).
@@ -38,7 +38,7 @@ SUMMARY_OUTPUT = ROOT / "crates" / "core" / "tests" / "fixtures" / "workbook_202
 
 SERVICE = "Служебный"
 SUMMARY = "Свод"
-# The month sheets of a workbook kept for a while: some months are missing.
+# The month sheets: some months have no sheet.
 SHEETS = ["01.25", "02.25", "03.25", "04.25", "06.25", "07.25", "06.26", "07.26"]
 SUMMARY_SHEETS = SHEETS[:6] + [f"{m:02d}.26" for m in range(1, 13)]
 # Sheets before 07.25 keep the cashback total at K7/L7, the later ones at L7/M7.
@@ -79,7 +79,7 @@ MONTH_NAMES = [
     "январь", "февраль", "март", "апрель", "май", "июнь",
     "июль", "август", "сентябрь", "октябрь", "ноябрь", "декабрь",
 ]
-SALARY = 55000
+INCOME_PLAN = 55000
 
 PURCHASES = [
     ("Пятёрочка", "продукты"),
@@ -104,7 +104,7 @@ PURCHASES = [
     ("Семена", "дача"),
     ("Мелочи", "разное"),
 ]
-CARDS = ["Газпром КР", "ПСБ 3170", "Росб 4512", "Озон", "Райф А", "Райф М", "Почта А", "Д ВТБ", "Совком А"]
+CARDS = ["Газпром КР", "ПСБ 7741", "Росб 4512", "Озон", "Райф А", "Райф М", "Почта А", "Д ВТБ", "Совком А"]
 RATES = [None, None, 0.01, 0.015, 0.03, 0.05, 0.05, 0.06, 0.1]
 PEOPLE = ["Андрей", "Марина"]
 
@@ -190,8 +190,9 @@ def fill(cells: Cells, sheet: str, rnd: random.Random, rows: int) -> None:
 
     # Edge cases at the end of the month.
     end = 4 + rows
-    # A certificate with cashback typed as an amount (no %), like 666 ₽ → 200 ₽.
-    put_row(cells, end, "Сертификат", "разное", None, "Марина", on(15), 666, None, 200, "Райф М")
+    # A gift card with cashback typed as an amount (no %): 900 ₽ → 250 ₽.
+    put_row(cells, end, "Подарочная карта", "разное", None, "Марина", on(15), 900, None, 250,
+            "Райф М")
     # A refund: a negative amount with a rate; ROUNDDOWN rounds toward zero.
     put_row(cells, end + 1, "Возврат куртки", "одежда", None, "Андрей", on(20), -2999.9, 0.05,
             rounddown(end + 1), "Газпром КР")
@@ -204,7 +205,7 @@ def fill(cells: Cells, sheet: str, rnd: random.Random, rows: int) -> None:
 
 def summary_sheet(sheets: list[str]) -> Cells:
     """«Свод»: a block per year, linked to the month sheets; a missing sheet gives an error."""
-    headers = ["Сумма", "Оклад", "Прирост", None] + [h for h, _ in COLUMNS] + [
+    headers = ["Сумма", "План дохода", "Прирост", None] + [h for h, _ in COLUMNS] + [
         "Регулярные", "Кэшбэк", "Общий баланс", "Общий % кэшбэка"]
     cells: Cells = {"A1": "№ п.п.", "B1": "Год", "C1": "Месяц", "D1": "Сумма",
                     "E1": "Баланс в мес./\nИтого за год", "F1": "Прирост относительно прошлого года"}
@@ -225,7 +226,7 @@ def summary_sheet(sheets: list[str]) -> Cells:
             cells[f"B{r}"] = year
             cells[f"C{r}"] = MONTH_NAMES[month - 1]
             cells[f"D{r}"] = Formula(f"{ref}H2")
-            cells[f"E{r}"] = SALARY
+            cells[f"E{r}"] = INCOME_PLAN
             if b > 0:
                 cells[f"F{r}"] = Formula(f"D{r}/D{r - block}-1")
             for i in range(len(COLUMNS) + 1):  # the columns and «Регулярные»: I$2…V$2
@@ -235,7 +236,7 @@ def summary_sheet(sheets: list[str]) -> Cells:
             cells[f"W{r}"] = Formula(f"E{r}+V{r}-D{r}")
             cells[f"X{r}"] = Formula(f"V{r}/D{r}")
             if sheet not in sheets:
-                # A month without a sheet: the links break, as in an old workbook.
+                # A month without a sheet: the links break.
                 for c in "DHIJKLMNOPQRSTUV":
                     cells[f"{c}{r}"] = Formula("#REF!")
         first, last = rows[0], rows[-1]

@@ -4,7 +4,7 @@
 import type { ExportFormat } from "../api";
 
 export const EXPORT_FORMATS: { format: ExportFormat; label: string; hint: string }[] = [
-  { format: "xlsx", label: "Excel (.xlsx)", hint: "листы как в его книге, числа вместо формул" },
+  { format: "xlsx", label: "Excel (.xlsx)", hint: "листы месяцев и «Свод», числа вместо формул" },
   { format: "json", label: "JSON (.json)", hint: "все данные файла, резервная копия" },
 ];
 

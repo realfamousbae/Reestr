@@ -185,7 +185,7 @@ pub(crate) const MIGRATIONS: &[&str] = &[
     ) STRICT;
 
     ALTER TABLE entry ADD COLUMN grace_period_id INTEGER REFERENCES grace_period (id);",
-    // 5: inflows and the income plan («Оклад» of «Свод»; stage 3b). A plan carries over to the
+    // 5: inflows and the income plan (stage 3b). A plan carries over to the
     // following months until changed, so only months where it was set have a row.
     // `participant_id` NULL is the family plan, the only one the app edits for now.
     "CREATE TABLE inflow (
