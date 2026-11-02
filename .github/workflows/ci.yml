@@ -1,10 +1,16 @@
-# Fast checks on Linux (PLAN §16, D36): for a pull request to master that is ready (a large
-# change; small ones gather on the working branch and are checked locally), and by hand. Not on
-# pushes, not on draft pull requests, not on changes to the docs only. One job: every
-# job is rounded up to whole minutes.
+# Fast checks on Linux (PLAN §16, D42): on every push to dev, for a pull request to master that
+# is ready, and by hand. The repository is public, so standard runners cost nothing. Not on
+# pushes to other branches, not on draft pull requests, not on changes to the docs only.
 name: CI
 
 on:
+  push:
+    branches: [dev]
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+      - "site/**"
+      - "LICENSE"
   pull_request:
     branches: [master]
     types: [opened, synchronize, reopened, ready_for_review]

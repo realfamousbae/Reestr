@@ -78,16 +78,17 @@ MCC`),
 - Dev machine is a MacBook Air M2 / 8 GB: Windows builds only in CI, no heavy emulators.
 - In a cloud session there is no Tauri window: verify via `cargo test`, `cargo clippy`,
   `cargo fmt --check`, `tsc`, `eslint`, `vitest`.
-- GitHub Actions minutes are limited (Windows counts ×2):
-  - `ci.yml` (ubuntu): tests, clippy (including the Tauri crate), tsc, vitest — only on a
-    ready (not draft) `pull_request` to `master` and by hand; not on pushes, not on docs-only
+- The repository is public, so standard GitHub runners are free (D42). Windows builds are still
+  slow and publish releases:
+  - `ci.yml` (ubuntu): tests, clippy (including the Tauri crate), tsc, vitest — on every push to
+    `dev`, on a ready (not draft) `pull_request` to `master` and by hand; not on docs-only
     changes. The default branch is `master`.
   - `windows-build.yml` (windows): full Tauri `.exe`/`.msi` — `workflow_dispatch` and `v*` tags
     only, never on every PR.
-  - **D36: CI and builds only for large changes.** Small changes gather on the working branch
-    without a pull request and are checked locally before every push. A pull request (and so
-    CI) is opened when a large change is ready. Windows builds and releases run only
-    when the author says so.
+  - **D36, changed by D42.** Small changes gather on the working branch without a pull request
+    and are checked locally before every push; CI then checks the push. A pull request is
+    opened when a large change is ready. Windows builds and releases run only when the author
+    says so.
   - All use caches (`Swatinem/rust-cache`, pnpm) and `concurrency` with `cancel-in-progress`.
 - `cargo test` and `vitest` must be green before opening a PR.
 - Tests are meaningful: money, cashback, grace periods, import. UI tests only for pure
