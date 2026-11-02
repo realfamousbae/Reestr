@@ -2555,7 +2555,7 @@ dependencies = [
 
 [[package]]
 name = "reestr-app"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "reestr-core",
  "reestr-storage",
@@ -2570,7 +2570,7 @@ dependencies = [
 
 [[package]]
 name = "reestr-core"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "calamine",
  "rust_xlsxwriter",
@@ -2582,7 +2582,7 @@ dependencies = [
 
 [[package]]
 name = "reestr-storage"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "calamine",
  "reestr-core",

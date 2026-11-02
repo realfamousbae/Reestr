@@ -196,72 +196,75 @@ function CreditPanel({ card, month, fontSize, onOps, onErrors, onDelete }: Credi
           Долг: <strong>{formatMoney(card.debt)} ₽</strong>
         </span>
       </header>
-      <div className={styles.terms}>
-        <TermField
-          label="Кредитный лимит, ₽"
-          value={card.creditLimit === null ? "" : moneyEditText(card.creditLimit)}
-          parse={parseOptionalMoney}
-          onSave={(value) => {
-            terms({
-              op: "creditTerms",
-              product: card.productId,
-              edit: { field: "creditLimit", value },
-            });
-          }}
-          onError={error}
-        />
-        <TermField
-          label="Грейс обычно, дней"
-          value={card.graceDays === null ? "" : card.graceDays.toString()}
-          parse={parseDays}
-          width={80}
-          onSave={(value) => {
-            terms({
-              op: "creditTerms",
-              product: card.productId,
-              edit: { field: "graceDays", value },
-            });
-          }}
-          onError={error}
-        />
-        <TermField
-          label="Доступный остаток, ₽"
-          value={card.manualAvailable === null ? "" : moneyEditText(card.manualAvailable)}
-          parse={parseAvailable}
-          onSave={(value) => {
-            // The date goes with the value: today unless given. Clearing the value clears both.
-            available(value, value === null ? null : (card.manualAvailableOn ?? todayIso()));
-          }}
-          onError={error}
-        />
-        <TermField
-          label="на дату"
-          value={card.manualAvailableOn === null ? "" : formatDate(card.manualAvailableOn)}
-          parse={(text) => parseDate(text, todayIso().slice(0, 7))}
-          placeholder="ДД.ММ.ГГГГ"
-          onSave={(value) => {
-            available(card.manualAvailable, value);
-          }}
-          onError={error}
-        />
-        <button
-          type="button"
-          className={styles.primary}
-          onClick={() => {
-            onOps([{ op: "addTranche", product: card.productId, edits: [] }]);
-          }}
-        >
-          Начался новый грейс
-        </button>
+      {/* One row of the panel's grid: the terms and the check line under them. */}
+      <div>
+        <div className={styles.terms}>
+          <TermField
+            label="Кредитный лимит, ₽"
+            value={card.creditLimit === null ? "" : moneyEditText(card.creditLimit)}
+            parse={parseOptionalMoney}
+            onSave={(value) => {
+              terms({
+                op: "creditTerms",
+                product: card.productId,
+                edit: { field: "creditLimit", value },
+              });
+            }}
+            onError={error}
+          />
+          <TermField
+            label="Грейс обычно, дней"
+            value={card.graceDays === null ? "" : card.graceDays.toString()}
+            parse={parseDays}
+            width={80}
+            onSave={(value) => {
+              terms({
+                op: "creditTerms",
+                product: card.productId,
+                edit: { field: "graceDays", value },
+              });
+            }}
+            onError={error}
+          />
+          <TermField
+            label="Доступный остаток, ₽"
+            value={card.manualAvailable === null ? "" : moneyEditText(card.manualAvailable)}
+            parse={parseAvailable}
+            onSave={(value) => {
+              // The date goes with the value: today unless given. Clearing the value clears both.
+              available(value, value === null ? null : (card.manualAvailableOn ?? todayIso()));
+            }}
+            onError={error}
+          />
+          <TermField
+            label="на дату"
+            value={card.manualAvailableOn === null ? "" : formatDate(card.manualAvailableOn)}
+            parse={(text) => parseDate(text, todayIso().slice(0, 7))}
+            placeholder="ДД.ММ.ГГГГ"
+            onSave={(value) => {
+              available(card.manualAvailable, value);
+            }}
+            onError={error}
+          />
+          <button
+            type="button"
+            className={styles.primary}
+            onClick={() => {
+              onOps([{ op: "addTranche", product: card.productId, edits: [] }]);
+            }}
+          >
+            Начался новый грейс
+          </button>
+        </div>
+        {card.available !== null && (
+          <p className={card.available.difference === 0 ? styles.check : styles.checkDiffers}>
+            {availableCheckText(card.available)}
+          </p>
+        )}
+        {card.available === null && card.manualAvailable !== null && (
+          <p className={styles.check}>Для сверки с банком укажите кредитный лимит.</p>
+        )}
       </div>
-      {card.available !== null && (
-        <p className={card.available.difference === 0 ? styles.check : styles.checkDiffers}>
-          {availableCheckText(card.available)}
-        </p>
-      )}
-      {card.available === null && card.manualAvailable !== null && (
-        <p className={styles.check}>Для сверки с банком укажите кредитный лимит.</p>
-      )}
 
       <h3 className={styles.caption}>
         Грейсы <span>— даты из выписки банка; покупки попадают в грейс по своей дате</span>

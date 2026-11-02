@@ -49,7 +49,7 @@ on Railway at https://reestr-docs.up.railway.app from the `dev` branch (`site/Do
 The landing page (https://reestr.up.railway.app) is plain HTML in `landing/`, served by Caddy
 on Railway from the `dev` branch (`landing/Dockerfile`); no build step and no requests to other
 hosts. Its download links name the release files, so **every release updates the version in
-`landing/index.html`** (search for the previous one, e.g. `0.3.0`).
+`landing/index.html`** (search for the previous one, e.g. `0.3.1`).
 Screenshots in `site/src/assets/screens/` are taken from a demo file with fictional data:
 `cargo run -p reestr-storage --example demo_file -- <path>/Семья.reestr` (password `demo-reestr`).
 
