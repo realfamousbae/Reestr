@@ -49,7 +49,8 @@ source of truth; this file condenses the rules from its §8, §10, §15 and §16
 ## UI (§8)
 
 - The month screen mirrors the source workbook's sheet: same columns in the same order
-  (`№ | Наименование | Назначение | Регулярная | Участник | Дата | Сумма | % | Кэшбэк | Карта`),
+  (`№ | Наименование | Назначение | Регулярная | Участник | Дата | Сумма | % | Кэшбэк | Карта |
+MCC`; MCC is ours, the workbook has no such column),
   category totals above the journal, blocks on the right, month tabs `MM.YY`, a «Свод» sheet.
   Changing column/block order requires an explicit decision by the author.
 - Excel feel: Enter/Tab/arrows, `Ctrl+Z`, paste ranges from clipboard, new row always at the

@@ -166,6 +166,7 @@ export interface EntryView {
   cashback: Kopecks | null;
   cashbackSource: CashbackSource | null;
   card: string | null;
+  mcc: string | null;
 }
 
 export interface TotalColumn {
@@ -191,8 +192,9 @@ export interface MonthTotals {
 export interface RuleView {
   id: number;
   card: string;
-  /** null is «на всё». */
+  /** null, and no MCC either, is «на всё». */
   category: string | null;
+  mcc: string | null;
   rateBp: number;
   spendCap: Kopecks | null;
   cashbackCap: Kopecks | null;
@@ -326,15 +328,20 @@ export type EntryEdit =
   | { field: "amount"; value: Kopecks }
   | { field: "rate"; value: number | null }
   | { field: "cashback"; value: Kopecks | null }
-  | { field: "card"; value: string | null };
+  | { field: "card"; value: string | null }
+  | { field: "mcc"; value: string | null };
 
 export type JournalOp =
   { op: "edit"; id: number; edit: EntryEdit } | { op: "append"; edits: EntryEdit[] };
 
-/** One rule field change; the card and the category are names, an empty category is «на всё». */
+/**
+ * One rule field change; the card and the category are names. A rule has an MCC, a category or
+ * neither, which is «на всё».
+ */
 export type RuleInput =
   | { field: "card"; value: string | null }
   | { field: "category"; value: string | null }
+  | { field: "mcc"; value: string | null }
   | { field: "rate"; value: number }
   | { field: "spendCap"; value: Kopecks | null }
   | { field: "cashbackCap"; value: Kopecks | null }

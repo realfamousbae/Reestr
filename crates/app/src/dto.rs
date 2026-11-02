@@ -156,6 +156,7 @@ pub struct EntryView {
     pub cashback: Option<Kopecks>,
     pub cashback_source: Option<CashbackSource>,
     pub card: Option<String>,
+    pub mcc: Option<String>,
 }
 
 /// Id → name lookups for building views.
@@ -201,6 +202,7 @@ impl Names {
             cashback: e.cashback.map(|c| c.amount),
             cashback_source: e.cashback.map(|c| c.source),
             card: name(&self.products, e.product_id),
+            mcc: e.mcc.map(String::from),
         }
     }
 }
@@ -212,8 +214,9 @@ impl Names {
 pub struct RuleView {
     pub id: RuleId,
     pub card: String,
-    /// `None` is «на всё».
+    /// With `mcc` also `None`, the rule is «на всё».
     pub category: Option<String>,
+    pub mcc: Option<String>,
     pub rate_bp: u32,
     pub spend_cap: Option<Kopecks>,
     pub cashback_cap: Option<Kopecks>,
@@ -239,6 +242,7 @@ impl RuleView {
             category: rule
                 .category_id
                 .and_then(|c| names.categories.get(&c).cloned()),
+            mcc: rule.mcc.map(String::from),
             rate_bp: rule.rate.0,
             spend_cap: rule.spend_cap,
             cashback_cap: rule.cashback_cap,

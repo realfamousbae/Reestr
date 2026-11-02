@@ -3,9 +3,23 @@ import { afterEach, describe, expect, it } from "vitest";
 import { formatDate, parseDate } from "./date";
 import { formatMoney, moneyEditText, parseMoney, setAlwaysKopecks } from "./money";
 import { formatPercent, parsePercent, percentEditText } from "./percent";
-import { complete, isKnown, matchOption, nameKey, parseYesNo, plural } from "./text";
+import { complete, isKnown, matchOption, nameKey, parseMcc, parseYesNo, plural } from "./text";
 
 const NBSP = "\u00a0";
+
+describe("parseMcc", () => {
+  it("keeps four digits as text and clears on empty", () => {
+    expect(parseMcc("0742")).toEqual({ ok: true, value: "0742" });
+    expect(parseMcc(" 5411 ")).toEqual({ ok: true, value: "5411" });
+    expect(parseMcc("  ")).toEqual({ ok: true, value: null });
+  });
+
+  it("refuses anything else", () => {
+    for (const text of ["742", "07420", "54a1", "54 11", "٠٧٤٢"]) {
+      expect(parseMcc(text)).toEqual({ ok: false, message: `MCC — это 4 цифры, а не «${text}»` });
+    }
+  });
+});
 
 describe("money", () => {
   it("formats kopecks with thousands groups and optional kopecks", () => {

@@ -74,6 +74,20 @@ fn dictionaries_of_the_workbook() {
     );
 }
 
+/// The source workbook has no MCC column; sheets before 07.25 keep «Итого:» in column K.
+#[test]
+fn old_sheets_have_no_mcc_and_keep_their_totals() {
+    let book = read_workbook(&fixture("workbook.xlsx")).unwrap();
+    assert!(
+        book.months
+            .iter()
+            .flat_map(|m| &m.rows)
+            .all(|r| r.mcc.is_none())
+    );
+    let early = book.months.iter().find(|m| m.sheet == "01.25").unwrap();
+    assert!(early.expected.cashback.is_some());
+}
+
 #[test]
 fn rows_are_read_like_the_sheet_shows_them() {
     let book = read_workbook(&fixture("workbook.xlsx")).unwrap();

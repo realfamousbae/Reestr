@@ -4,8 +4,8 @@ use std::collections::{BTreeSet, HashMap, HashSet};
 
 use reestr_core::date::{format_iso, parse_iso};
 use reestr_core::{
-    Cashback, CashbackSource, DictKind, EditInput, Entry, EntryEdit, EntryId, JournalOp, Kopecks,
-    Month, ProductId, RateBp, Rounding, TemplateId, allocate, name_key,
+    Cashback, CashbackSource, DictKind, EditError, EditInput, Entry, EntryEdit, EntryId, JournalOp,
+    Kopecks, Mcc, Month, ProductId, RateBp, Rounding, TemplateId, allocate, name_key, parse_mcc,
 };
 use rusqlite::types::Value;
 use rusqlite::{Connection, OptionalExtension, Row as SqlRow, params};
@@ -28,7 +28,26 @@ pub struct ApplyOutcome {
 
 pub(crate) const ENTRY_COLUMNS: &str = "id, month, title, category_id, is_regular, \
      participant_id, date, amount, cashback_amount, cashback_rate_bp, cashback_source, \
-     product_id, grace_period_id";
+     product_id, grace_period_id, mcc";
+
+/// An MCC column of `r`; what was stored passed the core's check.
+pub(crate) fn read_mcc(r: &SqlRow<'_>, index: usize) -> rusqlite::Result<Option<Mcc>> {
+    r.get::<_, Option<String>>(index)?
+        .map(|code| {
+            code.parse().map_err(|e| {
+                rusqlite::Error::FromSqlConversionFailure(
+                    index,
+                    rusqlite::types::Type::Text,
+                    Box::new(e),
+                )
+            })
+        })
+        .transpose()
+}
+
+pub(crate) fn mcc_value(mcc: Option<Mcc>) -> Value {
+    mcc.map_or(Value::Null, |m| Value::Text(m.to_string()))
+}
 
 pub(crate) fn read_entry(r: &SqlRow<'_>) -> rusqlite::Result<Entry> {
     let month: Month = r.get::<_, String>(1)?.parse().map_err(|e| {
@@ -60,11 +79,12 @@ pub(crate) fn read_entry(r: &SqlRow<'_>) -> rusqlite::Result<Entry> {
         cashback,
         product_id: r.get(11)?,
         grace_period_id: r.get(12)?,
+        mcc: read_mcc(r, 13)?,
     })
 }
 
 /// The columns of `entry` that edits change, as values.
-fn entry_values(e: &Entry) -> [(&'static str, Value); 12] {
+fn entry_values(e: &Entry) -> [(&'static str, Value); 13] {
     let opt = |v: Option<i64>| v.map_or(Value::Null, Value::Integer);
     [
         ("title", Value::Text(e.title.clone())),
@@ -89,6 +109,7 @@ fn entry_values(e: &Entry) -> [(&'static str, Value); 12] {
         ),
         ("product_id", opt(e.product_id)),
         ("grace_period_id", opt(e.grace_period_id)),
+        ("mcc", mcc_value(e.mcc)),
     ]
 }
 
@@ -160,12 +181,15 @@ fn resolve_edit(
         EditInput::Card(c) => {
             EntryEdit::Product(resolver.resolve(DictKind::Product, c.as_deref())?)
         }
+        EditInput::Mcc(m) => {
+            EntryEdit::Mcc(parse_mcc(m.as_deref()).map_err(EditError::InvalidMcc)?)
+        }
     })
 }
 
 /// Applies edits to an entry in memory with the journal rules: autofill from the last entry
 /// with the same title, a category's «регулярная по умолчанию», cashback by the card's
-/// rounding. Cashback is recomputed only when its inputs change (amount, card, category, a
+/// rounding. Cashback is recomputed only when its inputs change (amount, card, category, MCC, a
 /// cleared `%` or «Кэшбэк» cell), so an unrelated edit never moves an old cashback. A cashback
 /// that was not typed then follows the month's rules; [`reallocate`] fills it in.
 pub(crate) fn apply_edits(
@@ -186,6 +210,7 @@ pub(crate) fn apply_edits(
                 | EntryEdit::Cashback(None)
                 | EntryEdit::Product(_)
                 | EntryEdit::Category(_)
+                | EntryEdit::Mcc(_)
         );
         entry.apply(edit)?;
     }
@@ -193,9 +218,9 @@ pub(crate) fn apply_edits(
         && !entry.title.is_empty()
         && let Some(last) = last_with_title(conn, &entry.title, entry.id)?
     {
-        let before = (entry.product_id, entry.category_id);
+        let before = (entry.product_id, entry.category_id, entry.mcc);
         entry.autofill_from(&last);
-        cashback_inputs |= (entry.product_id, entry.category_id) != before;
+        cashback_inputs |= (entry.product_id, entry.category_id, entry.mcc) != before;
     }
     if category_typed
         && !entry.is_regular

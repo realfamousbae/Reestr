@@ -1,17 +1,17 @@
-// The table of the month's cashback rules: one row per card and category (PLAN §6, D21).
+// The table of the month's cashback rules: one row per card and category or MCC (PLAN §6, D21).
 // Spent and remaining sums come from the core; the UI only shows them.
 
 import type { RuleInput, RuleOp, RuleView } from "../api";
 import { formatMoney, moneyEditText, parseMoney } from "../format/money";
 import { type Parsed, fail, ok } from "../format/parsed";
 import { formatPercent, parsePercent, percentEditText } from "../format/percent";
-import { matchOption, nameKey } from "../format/text";
+import { matchOption, nameKey, parseMcc } from "../format/text";
 import type { CellChange } from "../grid/edits";
 import { type TableColumn, collectEdits } from "../grid/table";
 
 export type RuleColumn = TableColumn<RuleView, RuleInput>;
 
-/** What the category column shows for a rule without a category. */
+/** What the category column shows for a rule without a category and an MCC. */
 export const EVERYTHING = "на всё";
 
 const money = (v: number | null) => (v === null ? "" : formatMoney(v));
@@ -48,9 +48,20 @@ export function ruleColumns(cards: readonly string[], categories: readonly strin
       key: "category",
       title: "Категория",
       width: 140,
-      show: (r) => r.category ?? EVERYTHING,
+      show: (r) => (r.mcc === null ? (r.category ?? EVERYTHING) : ""),
       edit: (r) => r.category ?? "",
       parse: (text) => ok({ field: "category", value: parseRuleCategory(text, categories) }),
+    },
+    {
+      key: "mcc",
+      title: "MCC",
+      width: 64,
+      align: "right",
+      show: (r) => r.mcc ?? "",
+      parse: (text) => {
+        const parsed = parseMcc(text);
+        return parsed.ok ? ok({ field: "mcc", value: parsed.value }) : parsed;
+      },
     },
     {
       key: "rate",

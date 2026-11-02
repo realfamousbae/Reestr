@@ -44,6 +44,7 @@ type Row = (
     i64,
     i64,
     Option<String>,
+    Option<String>,
 );
 
 fn rows(vault: &Vault, month: Month) -> Vec<Row> {
@@ -84,6 +85,7 @@ fn rows(vault: &Vault, month: Month) -> Vec<Row> {
                         .collect(),
                     e.product_id,
                 ),
+                e.mcc.map(String::from),
             )
         })
         .collect()
@@ -124,19 +126,23 @@ fn filled(dir: &TempDir) -> Vault {
         true,
     )
     .unwrap();
-    let purchase = |title: &str, amount: i64| JournalOp::Append {
+    let purchase = |title: &str, amount: i64, mcc: &str| JournalOp::Append {
         edits: vec![
             EditInput::Title(title.into()),
             EditInput::Category(Some("продукты".into())),
             EditInput::Amount(rub(amount)),
             EditInput::Card(Some("Халва".into())),
             EditInput::Date(parse_iso(&format!("{month}-20"))),
+            EditInput::Mcc(Some(mcc.into())),
         ],
     };
     // 5% of 3 000 is 150 ₽; the second purchase gets what is left of the 200 ₽ limit.
     v.apply(
         month,
-        vec![purchase("Гипермаркет", 3_000), purchase("Рынок", 4_000)],
+        vec![
+            purchase("Гипермаркет", 3_000, "5411"),
+            purchase("Рынок", 4_000, "0742"),
+        ],
     )
     .unwrap();
     v.apply_inflows(
@@ -250,7 +256,28 @@ fn xlsx_reads_back_into_the_same_journal() {
         rules.get_value((1, 2)),
         Some(&Data::String("на всё".into()))
     );
-    assert_eq!(kopecks(rules.get_value((1, 8))), Some(rub(200).get()));
+    assert_eq!(rules.get_value((0, 3)), Some(&Data::String("MCC".into())));
+    assert_eq!(kopecks(rules.get_value((1, 9))), Some(rub(200).get()));
+
+    // Column K of the month sheet holds the code as text, right of «Карта»; the band above it and
+    // the blocks from L on stay where they were.
+    let last = *months.last().unwrap();
+    let sheet = sheets.worksheet_range(&last.sheet_name()).unwrap();
+    let row = (2..sheet.height() as u32)
+        .find(|r| sheet.get_value((*r, 1)) == Some(&Data::String("Рынок".into())))
+        .unwrap();
+    assert_eq!(
+        sheet.get_value((row, 9)),
+        Some(&Data::String("Халва".into()))
+    );
+    assert_eq!(
+        sheet.get_value((row, 10)),
+        Some(&Data::String("0742".into()))
+    );
+    assert_eq!(
+        sheet.get_value((6, 11)),
+        Some(&Data::String("Итого:".into()))
+    );
 
     // «Карты»: the balance entered from the bank and its date, under their headers.
     let cards_sheet = sheets.worksheet_range("Карты").unwrap();
@@ -360,4 +387,6 @@ fn json_carries_everything_stored() {
         .unwrap();
     assert_eq!(rule_entry["cashback"]["source"], "rule");
     assert_eq!(rule_entry["cashback"]["amount"], rub(50).get());
+    assert_eq!(rule_entry["mcc"], "0742");
+    assert!(doc["cashbackRules"][0]["mcc"].is_null());
 }

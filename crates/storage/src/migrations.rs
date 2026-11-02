@@ -256,6 +256,14 @@ pub(crate) const MIGRATIONS: &[&str] = &[
     // for (PLAN §7). The core keeps them set together; the columns are written one at a time.
     "ALTER TABLE credit_terms ADD COLUMN manual_available INTEGER;
     ALTER TABLE credit_terms ADD COLUMN manual_available_on TEXT;",
+    // 10: MCC of an entry and of a rule (D20), four digits as text: leading zeros matter. A rule
+    // has an MCC, a category or neither (the core checks both), and existing rules stay as they
+    // are: no code. The key keeps one rule per month, card and scope.
+    "ALTER TABLE entry ADD COLUMN mcc TEXT;
+    ALTER TABLE cashback_rule ADD COLUMN mcc TEXT;
+    DROP INDEX cashback_rule_key;
+    CREATE UNIQUE INDEX cashback_rule_key
+        ON cashback_rule (month, product_id, IFNULL(category_id, 0), IFNULL(mcc, ''));",
 ];
 
 /// The schema version this build writes and reads.
@@ -442,5 +450,54 @@ mod tests {
             )
             .unwrap();
         assert_eq!(row, (15_000_000, 100, None, None));
+    }
+
+    /// Version 10 gives rules and entries an empty MCC: every rule stays unique under the new
+    /// key and an entry falls under the same rule as before.
+    #[test]
+    fn version_10_keeps_the_rules_unique_and_matched_the_same_way() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        for sql in &MIGRATIONS[..9] {
+            conn.execute_batch(sql).unwrap();
+        }
+        conn.pragma_update(None, "user_version", 9).unwrap();
+        conn.execute_batch(
+            "INSERT INTO product (short_name, name_key) VALUES ('Райф А', 'райф а');
+             INSERT INTO category (name, name_key) VALUES ('продукты', 'продукты');
+             INSERT INTO cashback_rule (month, product_id, category_id, rate_bp)
+                 VALUES ('2026-07', 1, 1, 500), ('2026-07', 1, NULL, 100);
+             INSERT INTO entry (month, position, title, title_key, category_id, product_id, amount,
+                                created_at, updated_at)
+                 VALUES ('2026-07', 1, 'Лента', 'лента', 1, 1, 100000, '', ''),
+                        ('2026-07', 2, 'Кино', 'кино', NULL, 1, 50000, '', '');",
+        )
+        .unwrap();
+        migrate(&mut conn).unwrap();
+        assert_eq!(user_version(&conn).unwrap(), SCHEMA_VERSION);
+
+        let july = "2026-07".parse().unwrap();
+        let rules = crate::rules::rules_of(&conn, july).unwrap();
+        let entries = crate::journal::entries_of(&conn, july).unwrap();
+        assert!(rules.iter().all(|r| r.mcc.is_none()));
+        assert!(entries.iter().all(|e| e.mcc.is_none()));
+        let rates: Vec<_> = entries
+            .iter()
+            .map(|e| reestr_core::rule_of_entry(&rules, e).map(|r| r.rate.0))
+            .collect();
+        assert_eq!(rates, [Some(500), Some(100)]);
+
+        // The key still refuses a second rule of a scope, with or without a category.
+        let add = |category: Option<i64>, mcc: Option<&str>| {
+            conn.execute(
+                "INSERT INTO cashback_rule (month, product_id, category_id, mcc)
+                 VALUES ('2026-07', 1, ?1, ?2)",
+                params![category, mcc],
+            )
+        };
+        assert!(add(Some(1), None).is_err());
+        assert!(add(None, None).is_err());
+        add(None, Some("0742")).unwrap();
+        add(None, Some("5411")).unwrap();
+        assert!(add(None, Some("0742")).is_err());
     }
 }

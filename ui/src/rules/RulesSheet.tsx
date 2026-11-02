@@ -21,8 +21,8 @@ interface Props {
 }
 
 /**
- * The cashback rules of a month (PLAN §6): what each card pays for which category, its limits,
- * and what is used of them by the journal. Rules for a new month start as a copy of the
+ * The cashback rules of a month (PLAN §6): what each card pays for which MCC or category, its
+ * limits, and what is used of them by the journal. Rules for a new month start as a copy of the
  * previous month's, like a new sheet of the source workbook.
  */
 export function RulesSheet({
@@ -75,9 +75,9 @@ export function RulesSheet({
         </button>
       </header>
       <p className={styles.hint}>
-        Строка — правило карты на месяц. Пустая категория — «на всё»: всё, на что у карты нет своего
-        правила. Корректировка — траты, которых нет в журнале. Лимиты расходуются в порядке строк
-        журнала.
+        Строка — правило карты на месяц: на MCC, на категорию или, если оба пусты, «на всё» — всё,
+        на что у карты нет своего правила. Сначала ищется правило по MCC строки, потом по категории.
+        Корректировка — траты, которых нет в журнале. Лимиты расходуются в порядке строк журнала.
       </p>
       <div className={styles.grid}>
         <TableGrid

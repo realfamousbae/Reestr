@@ -118,6 +118,7 @@ impl Table {
                 "created_at",
                 "updated_at",
                 "grace_period_id",
+                "mcc",
             ],
             Self::RegularTemplate => &[
                 "title",
@@ -138,6 +139,7 @@ impl Table {
                 "cashback_cap",
                 "spent_adjustment",
                 "notes",
+                "mcc",
             ],
             Self::CreditTerms => &[
                 "product_id",

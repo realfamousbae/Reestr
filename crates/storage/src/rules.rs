@@ -6,8 +6,8 @@ use std::collections::HashMap;
 use reestr_core::rules::validate;
 use reestr_core::{
     CardSuggestion, Cashback, CashbackRule, CashbackSource, CategoryId, DictKind, EntryId, Kopecks,
-    Month, ProductId, RateBp, RuleId, RuleInput, RuleOp, RuleUsage, allocate, name_key,
-    rule_of_entry, suggest_cards,
+    Mcc, Month, ProductId, RateBp, RuleError, RuleId, RuleInput, RuleOp, RuleUsage, allocate,
+    check_scope, name_key, parse_mcc, rule_of_entry, suggest_cards,
 };
 use rusqlite::types::Value;
 use rusqlite::{Connection, OptionalExtension, Row as SqlRow, params};
@@ -16,11 +16,13 @@ use serde::Serialize;
 use crate::dict::{Created, Resolver};
 use crate::error::StorageError;
 use crate::history::{Recorder, Row, Table};
-use crate::journal::{entries_of, get_entry, reallocate, roundings, write_changes};
+use crate::journal::{
+    entries_of, get_entry, mcc_value, read_mcc, reallocate, roundings, write_changes,
+};
 use crate::vault::Vault;
 
 const RULE_COLUMNS: &str = "id, month, product_id, category_id, rate_bp, spend_cap, cashback_cap, \
-     spent_adjustment, notes";
+     spent_adjustment, notes, mcc";
 
 /// `meta` key of the card suggestion setting: "on" or "off"; absent until the user chooses.
 const SUGGESTIONS_KEY: &str = "card_suggestions";
@@ -39,6 +41,7 @@ fn read_rule(r: &SqlRow<'_>) -> rusqlite::Result<CashbackRule> {
         cashback_cap: r.get::<_, Option<i64>>(6)?.map(Kopecks),
         spent_adjustment: Kopecks(r.get(7)?),
         notes: r.get(8)?,
+        mcc: read_mcc(r, 9)?,
     })
 }
 
@@ -84,20 +87,21 @@ pub struct RulesOutcome {
     pub changed: usize,
 }
 
-/// The rule of the month with this card and category, other than `except`.
+/// The rule of the month with this card and scope (category or MCC), other than `except`.
 fn find_rule(
     conn: &Connection,
     month: Month,
     product: ProductId,
     category: Option<CategoryId>,
+    mcc: Option<Mcc>,
     except: Option<RuleId>,
 ) -> Result<Option<RuleId>, StorageError> {
     Ok(conn
         .query_row(
             "SELECT id FROM cashback_rule
              WHERE month = ?1 AND product_id = ?2 AND IFNULL(category_id, 0) = IFNULL(?3, 0)
-               AND id != IFNULL(?4, 0)",
-            params![month.to_string(), product, category, except],
+               AND IFNULL(mcc, '') = IFNULL(?4, '') AND id != IFNULL(?5, 0)",
+            params![month.to_string(), product, category, mcc_value(mcc), except],
             |r| r.get(0),
         )
         .optional()?)
@@ -124,6 +128,7 @@ fn insert_rule(rec: &Recorder<'_>, rule: &CashbackRule) -> Result<RuleId, Storag
         rule.month,
         rule.product_id,
         rule.category_id,
+        rule.mcc,
         None,
     )?
     .is_some()
@@ -145,6 +150,7 @@ fn insert_rule(rec: &Recorder<'_>, rule: &CashbackRule) -> Result<RuleId, Storag
             Value::Integer(rule.spent_adjustment.get()),
         ),
         ("notes", rule.notes.clone().map_or(Value::Null, Value::Text)),
+        ("mcc", mcc_value(rule.mcc)),
     ];
     rec.insert(Table::CashbackRule, &row)
 }
@@ -162,17 +168,29 @@ fn edit_rule(
             let product = resolver
                 .resolve(DictKind::Product, name.as_deref())?
                 .ok_or(StorageError::EmptyName)?;
-            if find_rule(rec.tx(), rule.month, product, rule.category_id, Some(id))?.is_some() {
+            let (category, mcc) = (rule.category_id, rule.mcc);
+            if find_rule(rec.tx(), rule.month, product, category, mcc, Some(id))?.is_some() {
                 return Err(StorageError::DuplicateRule);
             }
             ("product_id", Value::Integer(product))
         }
         RuleInput::Category(name) => {
             let category = resolve_category(resolver, name.as_deref())?;
-            if find_rule(rec.tx(), rule.month, rule.product_id, category, Some(id))?.is_some() {
+            check_scope(category, rule.mcc)?;
+            let product = rule.product_id;
+            if find_rule(rec.tx(), rule.month, product, category, rule.mcc, Some(id))?.is_some() {
                 return Err(StorageError::DuplicateRule);
             }
             ("category_id", category.map_or(Value::Null, Value::Integer))
+        }
+        RuleInput::Mcc(code) => {
+            let mcc = parse_mcc(code.as_deref()).map_err(RuleError::InvalidMcc)?;
+            check_scope(rule.category_id, mcc)?;
+            let (product, category) = (rule.product_id, rule.category_id);
+            if find_rule(rec.tx(), rule.month, product, category, mcc, Some(id))?.is_some() {
+                return Err(StorageError::DuplicateRule);
+            }
+            ("mcc", mcc_value(mcc))
         }
         RuleInput::Rate(rate) => ("rate_bp", Value::Integer(i64::from(rate.0))),
         RuleInput::SpendCap(cap) => ("spend_cap", opt_int(cap)),
@@ -209,6 +227,12 @@ fn append_rule(
         Some(name) => resolve_category(resolver, name.as_deref())?,
         None => None,
     };
+    let code = edits.iter().find_map(|e| match e {
+        RuleInput::Mcc(code) => Some(code.as_deref()),
+        _ => None,
+    });
+    let mcc = parse_mcc(code.flatten()).map_err(RuleError::InvalidMcc)?;
+    check_scope(category, mcc)?;
     let id = insert_rule(
         resolver.rec(),
         &CashbackRule {
@@ -221,10 +245,14 @@ fn append_rule(
             cashback_cap: None,
             spent_adjustment: Kopecks::ZERO,
             notes: None,
+            mcc,
         },
     )?;
     for edit in edits {
-        if !matches!(edit, RuleInput::Card(_) | RuleInput::Category(_)) {
+        if !matches!(
+            edit,
+            RuleInput::Card(_) | RuleInput::Category(_) | RuleInput::Mcc(_)
+        ) {
             edit_rule(resolver, id, edit)?;
         }
     }
@@ -234,7 +262,8 @@ fn append_rule(
 /// Copies the rules of `from` that `month` does not have yet.
 fn copy_rules(rec: &Recorder<'_>, from: Month, month: Month) -> Result<(), StorageError> {
     for rule in rules_of(rec.tx(), from)? {
-        if find_rule(rec.tx(), month, rule.product_id, rule.category_id, None)?.is_none() {
+        let (product, category) = (rule.product_id, rule.category_id);
+        if find_rule(rec.tx(), month, product, category, rule.mcc, None)?.is_none() {
             insert_rule(
                 rec,
                 &CashbackRule {
@@ -358,8 +387,8 @@ impl Vault {
         self.record("rules", |rec| run(rec, month, ops, recompute))
     }
 
-    /// Cards to pay with for an entry of the month, best first (D6): for its category and
-    /// amount, with the limits the other entries left. A new row has no category yet: then the
+    /// Cards to pay with for an entry of the month, best first (D6): for its MCC, category and
+    /// amount, with the limits the other entries left. A new row has neither yet: then the
     /// cards' «на всё» rules count.
     pub fn card_suggestions(
         &self,
@@ -371,8 +400,9 @@ impl Vault {
             .transpose()?
             .flatten();
         let category = entry.as_ref().and_then(|e| e.category_id);
+        let mcc = entry.as_ref().and_then(|e| e.mcc);
         let amount = entry.as_ref().map(|e| e.amount);
-        self.suggest(month, entry.map(|e| e.id), category, amount)
+        self.suggest(month, entry.map(|e| e.id), category, mcc, amount)
     }
 
     fn suggest(
@@ -380,6 +410,7 @@ impl Vault {
         month: Month,
         except: Option<EntryId>,
         category: Option<CategoryId>,
+        mcc: Option<Mcc>,
         amount: Option<Kopecks>,
     ) -> Result<Vec<CardSuggestion>, StorageError> {
         let rules = rules_of(&self.conn, month)?;
@@ -402,7 +433,7 @@ impl Vault {
                 .collect::<Result<_, _>>()?
         };
         Ok(
-            suggest_cards(&rules, &usage, month, category, amount, rounding)
+            suggest_cards(&rules, &usage, month, category, mcc, amount, rounding)
                 .into_iter()
                 .filter(|s| !inactive.contains(&s.product_id))
                 .collect(),

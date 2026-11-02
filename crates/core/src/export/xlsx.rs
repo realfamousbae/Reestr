@@ -297,8 +297,9 @@ fn service_sheet(wb: &mut Workbook, book: &Book, s: &Styles) -> Result<(), XlsxE
 }
 
 /// The journal columns of a month sheet, A–G; H–J (%, cashback, card) sit under the totals band
-/// like in the source sheet.
-const JOURNAL: [(&str, f64); 10] = [
+/// like in the source sheet, and so does K (MCC), which the source sheet does not have. Rows 1–2
+/// of K belong to the band, so K is wide enough for a total.
+const JOURNAL: [(&str, f64); 11] = [
     ("№", 5.0),
     ("Наименование", 32.0),
     ("Назначение", 14.0),
@@ -309,6 +310,7 @@ const JOURNAL: [(&str, f64); 10] = [
     ("Итого, руб.", 12.0),
     ("", 11.0),
     ("", 11.0),
+    ("", 12.0),
 ];
 
 /// Where the source sheet keeps «Итого:» and «Ср. %» of the cashback: L7:M8.
@@ -378,6 +380,8 @@ fn month_sheet(
             rate,
             Cell::money(e.cashback.map(|c| c.amount)),
             names.product(e.product_id),
+            // Text: a number would lose the leading zero of 0742.
+            Cell::opt_text(e.mcc.as_ref().map(crate::mcc::Mcc::as_str)),
         ];
         put_row(ws, row_num(i + 2), 0, &cells, s, false)?;
     }
@@ -720,6 +724,7 @@ fn data_sheets(wb: &mut Workbook, book: &Book, names: &Names, s: &Styles) -> Res
             ("Месяц", 9.0),
             ("Карта", 14.0),
             ("Категория", 16.0),
+            ("MCC", 7.0),
             ("%", 8.0),
             ("Лимит трат", 13.0),
             ("Лимит кэшбэка", 13.0),
@@ -736,11 +741,11 @@ fn data_sheets(wb: &mut Workbook, book: &Book, names: &Names, s: &Styles) -> Res
                 vec![
                     Cell::text(&r.month.sheet_name()),
                     names.product(Some(r.product_id)),
-                    if r.category_id.is_some() {
-                        names.category(r.category_id)
-                    } else {
-                        Cell::text("на всё")
+                    match (r.category_id, r.mcc) {
+                        (None, None) => Cell::text("на всё"),
+                        (category, _) => names.category(category),
                     },
+                    Cell::opt_text(r.mcc.as_ref().map(crate::mcc::Mcc::as_str)),
                     Cell::Percent(i64::from(r.rate.0)),
                     Cell::money(r.spend_cap),
                     Cell::money(r.cashback_cap),

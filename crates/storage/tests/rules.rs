@@ -2,8 +2,8 @@
 //! the recompute question, copying, undo, card suggestions.
 
 use reestr_core::{
-    Cashback, CashbackSource, DictKind, DictOp, EditInput, Entry, JournalOp, Kopecks, Month,
-    RateBp, RuleError, RuleInput, RuleOp,
+    Cashback, CashbackSource, DictKind, DictOp, EditError, EditInput, Entry, JournalOp, Kopecks,
+    Month, RateBp, RuleError, RuleInput, RuleOp,
 };
 use reestr_storage::{MonthRules, StorageError, Vault};
 use tempfile::TempDir;
@@ -545,4 +545,401 @@ fn acceptance_month_with_hand_computed_limits() {
     assert!(rules.usage[0].is_exhausted());
     assert!(!rules.usage[1].is_exhausted());
     assert!(rules.usage[2].is_exhausted());
+}
+
+fn mcc_rule(card: &str, code: &str, bp: u32) -> Vec<RuleInput> {
+    vec![
+        RuleInput::Card(Some(card.into())),
+        RuleInput::Mcc(Some(code.into())),
+        RuleInput::Rate(RateBp(bp)),
+    ]
+}
+
+fn with_mcc(mut edits: Vec<EditInput>, code: &str) -> Vec<EditInput> {
+    edits.push(EditInput::Mcc(Some(code.into())));
+    edits
+}
+
+fn code(entry: &Entry) -> Option<String> {
+    entry.mcc.map(String::from)
+}
+
+#[test]
+fn mcc_goes_first_then_the_category_then_everything() {
+    let dir = TempDir::new().unwrap();
+    let mut v = new_vault(&dir);
+    add_rules(
+        &mut v,
+        july(),
+        vec![
+            mcc_rule("Райф А", "5411", 700),
+            rule("Райф А", Some("продукты"), 500),
+            rule("Райф А", None, 100),
+        ],
+    );
+    let plain = append(&mut v, july(), purchase("продукты", "Райф А", 1000));
+    let by_code = with_mcc(purchase("продукты", "Райф А", 1000), "5411");
+    let by_code = append(&mut v, july(), by_code);
+    let other_code = with_mcc(purchase("продукты", "Райф А", 1000), "0742");
+    let other_code = append(&mut v, july(), other_code);
+    let no_rule = with_mcc(purchase("еда", "Райф А", 1000), "0742");
+    let no_rule = append(&mut v, july(), no_rule);
+    assert_eq!(cashback(&v, by_code), Some(rub(70)));
+    assert_eq!(cashback(&v, other_code), Some(rub(50)));
+    assert_eq!(cashback(&v, no_rule), Some(rub(10)));
+    assert_eq!(cashback(&v, plain), Some(rub(50)));
+
+    // Each rule counts its own rows only.
+    let rules = v.month_rules(july()).unwrap();
+    assert_eq!(rules.usage[0].entries, 1);
+    assert_eq!(rules.usage[1].entries, 2);
+    assert_eq!(rules.usage[2].entries, 1);
+}
+
+#[test]
+fn an_mcc_edit_settles_the_cashback_again() {
+    let dir = TempDir::new().unwrap();
+    let mut v = new_vault(&dir);
+    add_rules(
+        &mut v,
+        july(),
+        vec![mcc_rule("Райф А", "0742", 900), rule("Райф А", None, 100)],
+    );
+    let id = append(&mut v, july(), purchase("еда", "Райф А", 1000));
+    assert_eq!(cashback(&v, id), Some(rub(10)));
+    edit(&mut v, id, EditInput::Mcc(Some(" 0742 ".into())));
+    assert_eq!(code(&entry(&v, id)).as_deref(), Some("0742"));
+    assert_eq!(cashback(&v, id), Some(rub(90)));
+    edit(&mut v, id, EditInput::Mcc(Some(String::new())));
+    assert_eq!(entry(&v, id).mcc, None);
+    assert_eq!(cashback(&v, id), Some(rub(10)));
+    v.undo().unwrap();
+    assert_eq!(code(&entry(&v, id)).as_deref(), Some("0742"));
+    assert_eq!(cashback(&v, id), Some(rub(90)));
+
+    // A row with a typed cashback keeps it, and an invalid code changes nothing.
+    edit(&mut v, id, EditInput::Cashback(Some(rub(5))));
+    edit(&mut v, id, EditInput::Mcc(None));
+    assert_eq!(cashback(&v, id), Some(rub(5)));
+    let bad = JournalOp::Edit {
+        id,
+        edit: EditInput::Mcc(Some("74".into())),
+    };
+    assert!(matches!(
+        v.apply(july(), vec![bad]),
+        Err(StorageError::Edit(EditError::InvalidMcc(_)))
+    ));
+    assert_eq!(entry(&v, id).mcc, None);
+}
+
+#[test]
+fn the_mcc_of_the_last_same_title_fills_a_new_row_and_its_cashback() {
+    let dir = TempDir::new().unwrap();
+    let mut v = new_vault(&dir);
+    add_rules(
+        &mut v,
+        july(),
+        vec![mcc_rule("Райф А", "5814", 1000), rule("Райф А", None, 100)],
+    );
+    let title = |t: &str| EditInput::Title(t.into());
+    let first = append(
+        &mut v,
+        july(),
+        vec![
+            title("Кофейня"),
+            EditInput::Card(Some("Райф А".into())),
+            EditInput::Amount(rub(100)),
+            EditInput::Mcc(Some("5814".into())),
+        ],
+    );
+    assert_eq!(cashback(&v, first), Some(rub(10)));
+
+    // The whole row at once: the code comes with the title, the rule follows it.
+    let second = append(
+        &mut v,
+        july(),
+        vec![title("Кофейня"), EditInput::Amount(rub(200))],
+    );
+    assert_eq!(code(&entry(&v, second)).as_deref(), Some("5814"));
+    assert_eq!(cashback(&v, second), Some(rub(20)));
+
+    // Cell by cell: the amount is there first, then the title brings the code and the card.
+    let third = append(&mut v, july(), vec![EditInput::Amount(rub(300))]);
+    assert_eq!(cashback(&v, third), None);
+    edit(&mut v, third, title("Кофейня"));
+    assert_eq!(code(&entry(&v, third)).as_deref(), Some("5814"));
+    assert_eq!(cashback(&v, third), Some(rub(30)));
+
+    // A code typed by hand stays.
+    let own = append(
+        &mut v,
+        july(),
+        vec![
+            EditInput::Mcc(Some("0742".into())),
+            title("Кофейня"),
+            EditInput::Amount(rub(100)),
+        ],
+    );
+    assert_eq!(code(&entry(&v, own)).as_deref(), Some("0742"));
+    assert_eq!(cashback(&v, own), Some(rub(1)));
+}
+
+#[test]
+fn a_rule_has_an_mcc_or_a_category_and_one_of_a_kind() {
+    let dir = TempDir::new().unwrap();
+    let mut v = new_vault(&dir);
+    add_rules(
+        &mut v,
+        july(),
+        vec![
+            mcc_rule("Райф А", "0742", 700),
+            rule("Райф А", Some("продукты"), 500),
+            rule("Райф А", None, 100),
+        ],
+    );
+    let rules = v.month_rules(july()).unwrap();
+    let (by_code, by_category) = (rule_id(&rules, 0), rule_id(&rules, 1));
+    assert_eq!(rules.rules[0].mcc, Some("0742".parse().unwrap()));
+    assert_eq!(rules.rules[0].category_id, None);
+
+    let set = |id, edit| vec![RuleOp::Edit { id, edit }];
+    assert!(matches!(
+        v.apply_rules(
+            july(),
+            set(by_code, RuleInput::Category(Some("еда".into()))),
+            true
+        ),
+        Err(StorageError::Rule(RuleError::MccAndCategory))
+    ));
+    assert!(matches!(
+        v.apply_rules(
+            july(),
+            set(by_category, RuleInput::Mcc(Some("5411".into()))),
+            true
+        ),
+        Err(StorageError::Rule(RuleError::MccAndCategory))
+    ));
+    let mut both = rule("Газпром КР", Some("еда"), 100);
+    both.push(RuleInput::Mcc(Some("5411".into())));
+    assert!(matches!(
+        v.apply_rules(july(), vec![RuleOp::Append { edits: both }], true),
+        Err(StorageError::Rule(RuleError::MccAndCategory))
+    ));
+
+    // A bad code, on a new rule and on an existing one.
+    for edit in ["742", "07420", "ab12"] {
+        assert!(matches!(
+            v.apply_rules(
+                july(),
+                set(by_code, RuleInput::Mcc(Some(edit.into()))),
+                true
+            ),
+            Err(StorageError::Rule(RuleError::InvalidMcc(_)))
+        ));
+        assert!(matches!(
+            v.apply_rules(
+                july(),
+                vec![RuleOp::Append {
+                    edits: mcc_rule("Газпром КР", edit, 100)
+                }],
+                true
+            ),
+            Err(StorageError::Rule(RuleError::InvalidMcc(_)))
+        ));
+    }
+
+    // The same code twice on a card is a duplicate, on another card it is not.
+    assert!(matches!(
+        v.apply_rules(
+            july(),
+            vec![RuleOp::Append {
+                edits: mcc_rule("Райф А", "0742", 100)
+            }],
+            true
+        ),
+        Err(StorageError::DuplicateRule)
+    ));
+    add_rules(
+        &mut v,
+        july(),
+        vec![
+            mcc_rule("Газпром КР", "0742", 100),
+            mcc_rule("Райф А", "5411", 100),
+        ],
+    );
+    let last = rule_id(&v.month_rules(july()).unwrap(), 4);
+    assert!(matches!(
+        v.apply_rules(july(), set(last, RuleInput::Mcc(Some("0742".into()))), true),
+        Err(StorageError::DuplicateRule)
+    ));
+    // Clearing the code of the rule makes it «на всё», which the card already has.
+    assert!(matches!(
+        v.apply_rules(july(), set(last, RuleInput::Mcc(None)), true),
+        Err(StorageError::DuplicateRule)
+    ));
+    let other = rule_id(&v.month_rules(july()).unwrap(), 3);
+    assert!(matches!(
+        v.apply_rules(
+            july(),
+            set(other, RuleInput::Card(Some("Райф А".into()))),
+            true
+        ),
+        Err(StorageError::DuplicateRule)
+    ));
+
+    // A rule moves from a code to a category when the code is cleared first.
+    v.apply_rules(
+        july(),
+        vec![
+            RuleOp::Edit {
+                id: last,
+                edit: RuleInput::Rate(RateBp(200)),
+            },
+            RuleOp::Delete {
+                ids: vec![rule_id(&v.month_rules(july()).unwrap(), 2)],
+            },
+            RuleOp::Edit {
+                id: last,
+                edit: RuleInput::Mcc(None),
+            },
+            RuleOp::Edit {
+                id: last,
+                edit: RuleInput::Category(Some("еда".into())),
+            },
+        ],
+        true,
+    )
+    .unwrap();
+    let rules = v.month_rules(july()).unwrap();
+    let moved = rules.rules.iter().find(|r| r.id == last).unwrap();
+    assert_eq!(moved.mcc, None);
+    assert!(moved.category_id.is_some());
+}
+
+#[test]
+fn a_new_mcc_rule_goes_through_the_recompute_question() {
+    let dir = TempDir::new().unwrap();
+    let mut v = new_vault(&dir);
+    add_rules(&mut v, july(), vec![rule("Райф А", None, 100)]);
+    let coded = with_mcc(purchase("еда", "Райф А", 2000), "5814");
+    let plain = append(&mut v, july(), purchase("еда", "Райф А", 2000));
+    let coded = append(&mut v, july(), coded);
+    let new_rule = || {
+        vec![RuleOp::Append {
+            edits: mcc_rule("Райф А", "5814", 1000),
+        }]
+    };
+
+    // Only the row with the code would change. Asking changes nothing.
+    assert_eq!(v.rules_impact(july(), new_rule()).unwrap(), 1);
+    assert_eq!(cashback(&v, coded), Some(rub(20)));
+    assert_eq!(v.month_rules(july()).unwrap().rules.len(), 1);
+
+    // «Пересчитать»; undo takes back the rule and the cashback.
+    assert_eq!(v.apply_rules(july(), new_rule(), true).unwrap().changed, 1);
+    assert_eq!(cashback(&v, coded), Some(rub(200)));
+    assert_eq!(cashback(&v, plain), Some(rub(20)));
+    v.undo().unwrap();
+    assert_eq!(cashback(&v, coded), Some(rub(20)));
+
+    // «Оставить как есть»: the row keeps its cashback as typed.
+    assert_eq!(v.apply_rules(july(), new_rule(), false).unwrap().changed, 0);
+    assert_eq!(cashback(&v, coded), Some(rub(20)));
+    assert_eq!(source(&v, coded), Some(CashbackSource::ManualPercent));
+    // A row that came after the rule follows it, with what is left of nothing typed.
+    let later = with_mcc(purchase("еда", "Райф А", 1000), "5814");
+    let later = append(&mut v, july(), later);
+    assert_eq!(cashback(&v, later), Some(rub(100)));
+}
+
+#[test]
+fn undo_of_a_delete_brings_the_mcc_back() {
+    let dir = TempDir::new().unwrap();
+    let mut v = new_vault(&dir);
+    add_rules(&mut v, july(), vec![mcc_rule("Райф А", "0742", 500)]);
+    let id = with_mcc(purchase("еда", "Райф А", 1000), "0742");
+    let id = append(&mut v, july(), id);
+    assert_eq!(cashback(&v, id), Some(rub(50)));
+
+    v.delete_entries(&[id]).unwrap();
+    v.undo().unwrap();
+    assert_eq!(code(&entry(&v, id)).as_deref(), Some("0742"));
+    assert_eq!(cashback(&v, id), Some(rub(50)));
+
+    let rule = rule_id(&v.month_rules(july()).unwrap(), 0);
+    let delete = vec![RuleOp::Delete { ids: vec![rule] }];
+    v.apply_rules(july(), delete, true).unwrap();
+    assert_eq!(cashback(&v, id), None);
+    v.undo().unwrap();
+    let rules = v.month_rules(july()).unwrap();
+    assert_eq!(rules.rules[0].mcc, Some("0742".parse().unwrap()));
+    assert_eq!(rules.usage[0].entries, 1);
+    assert_eq!(cashback(&v, id), Some(rub(50)));
+    v.redo().unwrap();
+    assert!(v.month_rules(july()).unwrap().rules.is_empty());
+}
+
+#[test]
+fn mcc_rules_are_copied_and_keep_their_limits_apart() {
+    let dir = TempDir::new().unwrap();
+    let mut v = new_vault(&dir);
+    let mut coded = mcc_rule("Райф А", "0742", 1000);
+    coded.push(RuleInput::CashbackCap(Some(rub(100))));
+    add_rules(
+        &mut v,
+        june(),
+        vec![
+            coded,
+            mcc_rule("Райф А", "5411", 500),
+            rule("Райф А", None, 100),
+        ],
+    );
+    let copy = || vec![RuleOp::CopyFrom { from: june() }];
+    v.apply_rules(july(), copy(), true).unwrap();
+    // Copying again adds nothing: every rule is there, each with its own code.
+    v.apply_rules(july(), copy(), true).unwrap();
+    let rules = v.month_rules(july()).unwrap();
+    let codes: Vec<_> = rules
+        .rules
+        .iter()
+        .map(|r| r.mcc.map(String::from))
+        .collect();
+    assert_eq!(
+        codes,
+        [Some("0742".to_owned()), Some("5411".to_owned()), None]
+    );
+
+    let a = with_mcc(purchase("еда", "Райф А", 800), "0742");
+    let a = append(&mut v, july(), a);
+    let b = with_mcc(purchase("еда", "Райф А", 800), "0742");
+    let b = append(&mut v, july(), b);
+    assert_eq!(cashback(&v, a), Some(rub(80)));
+    assert_eq!(cashback(&v, b), Some(rub(20)));
+    assert!(v.month_rules(july()).unwrap().usage[0].is_exhausted());
+}
+
+#[test]
+fn suggestions_for_a_row_see_its_mcc() {
+    let dir = TempDir::new().unwrap();
+    let mut v = new_vault(&dir);
+    add_rules(
+        &mut v,
+        july(),
+        vec![
+            rule("Райф А", Some("еда"), 300),
+            mcc_rule("Газпром КР", "5814", 700),
+        ],
+    );
+    let plain = append(&mut v, july(), purchase("еда", "Райф А", 1000));
+    let coded = with_mcc(purchase("еда", "Райф А", 1000), "5814");
+    let coded = append(&mut v, july(), coded);
+    let rates = |v: &Vault, id| -> Vec<u32> {
+        v.card_suggestions(july(), Some(id))
+            .unwrap()
+            .iter()
+            .map(|s| s.rate.0)
+            .collect()
+    };
+    assert_eq!(rates(&v, plain), [300]);
+    assert_eq!(rates(&v, coded), [700, 300]);
 }

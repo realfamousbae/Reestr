@@ -11,6 +11,7 @@ pub mod dict;
 pub mod export;
 pub mod import;
 pub mod journal;
+pub mod mcc;
 pub mod money;
 pub mod month;
 pub mod products;
@@ -25,6 +26,7 @@ pub use dict::{
     name_key,
 };
 pub use journal::{EditError, EditInput, Entry, EntryEdit, EntryId, JournalOp};
+pub use mcc::{InvalidMcc, Mcc, parse_mcc};
 pub use money::Kopecks;
 pub use month::Month;
 pub use products::{
@@ -35,7 +37,7 @@ pub use products::{
 };
 pub use rules::{
     Allocation, CardSuggestion, CashbackRule, RuleError, RuleId, RuleInput, RuleOp, RuleUsage,
-    allocate, rule_for, rule_of_entry, suggest_cards,
+    allocate, check_scope, rule_for, rule_of_entry, suggest_cards,
 };
 pub use summary::{
     Inflow, InflowId, InflowInput, InflowOp, MonthBalance, Plan, SummaryColumn, SummaryFooter,

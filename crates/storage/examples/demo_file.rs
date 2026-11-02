@@ -152,6 +152,16 @@ fn savings(vault: &mut Vault) -> Result {
     Ok(())
 }
 
+/// The fictional merchant code of a demo purchase.
+fn demo_mcc(title: &str) -> Option<&'static str> {
+    match title {
+        "Пиццерия" => Some("5812"),
+        "Кофейня" => Some("5814"),
+        "Перекрёсток" | "Магнит" | "Азбука вкуса" => Some("5411"),
+        _ => None,
+    }
+}
+
 /// Step 4: cashback rules of the last two months, with the journal following them.
 fn cashback_rules(vault: &mut Vault) -> Result {
     let rule =
@@ -172,6 +182,14 @@ fn cashback_rules(vault: &mut Vault) -> Result {
             rule("Совком А", None, 100, None, None),
             rule("Почта А", Some("одежда"), 500, None, Some(300)),
             rule("Райф М", Some("еда"), 700, None, None),
+            // A rule by the merchant code: restaurants of the card pay more than its «еда».
+            RuleOp::Append {
+                edits: vec![
+                    RuleInput::Card(Some("Райф М".into())),
+                    RuleInput::Mcc(Some("5812".into())),
+                    RuleInput::Rate(RateBp(1000)),
+                ],
+            },
         ];
         vault.apply_rules(m, ops, true)?;
 
@@ -203,6 +221,7 @@ fn cashback_rules(vault: &mut Vault) -> Result {
                     EditInput::Date(Some(date(day))),
                     EditInput::Amount(rub(*amount)),
                     EditInput::Card(Some((*card).into())),
+                    EditInput::Mcc(demo_mcc(title).map(Into::into)),
                 ],
             })
             .collect();
@@ -570,9 +589,10 @@ fn summary(vault: &Vault) -> Result {
         rules += r.rules.len();
         for (rule, usage) in r.rules.iter().zip(&r.usage) {
             println!(
-                "  {m} rule {} {:?}: spent {} cashback {} exhausted {}",
+                "  {m} rule {} {:?} {:?}: spent {} cashback {} exhausted {}",
                 rule.product_id,
                 rule.category_id,
+                rule.mcc,
                 money(usage.spent),
                 money(usage.cashback),
                 usage.is_exhausted()

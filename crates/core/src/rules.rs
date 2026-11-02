@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use crate::cashback::{Cashback, CashbackSource, RateBp, Rounding, cashback_for};
 use crate::dict::{CategoryId, ProductId};
 use crate::journal::{Entry, EntryId};
+use crate::mcc::{InvalidMcc, Mcc, parse_mcc};
 use crate::money::Kopecks;
 use crate::month::Month;
 
@@ -20,7 +21,8 @@ pub struct CashbackRule {
     pub id: RuleId,
     pub month: Month,
     pub product_id: ProductId,
-    /// `None` is «на всё»: everything the card pays for that has no rule of its own.
+    /// Without it and without `mcc` the rule is «на всё»: everything the card pays for that has
+    /// no rule of its own.
     pub category_id: Option<CategoryId>,
     pub rate: RateBp,
     /// Spending that earns cashback; above it the rate no longer applies.
@@ -30,15 +32,19 @@ pub struct CashbackRule {
     /// Spending that is not in the journal (D8); it earns cashback at the rule's rate.
     pub spent_adjustment: Kopecks,
     pub notes: Option<String>,
+    /// A rule by the merchant code; such a rule has no category (D20).
+    pub mcc: Option<Mcc>,
 }
 
 /// A change of one rule field as the UI sends it. The card and the category are names; missing
-/// ones are created (D17). An empty category means «на всё».
+/// ones are created (D17). An empty category without an MCC means «на всё».
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "field", content = "value", rename_all = "camelCase")]
 pub enum RuleInput {
     Card(Option<String>),
     Category(Option<String>),
+    /// As typed; checked by [`validate`].
+    Mcc(Option<String>),
     Rate(RateBp),
     SpendCap(Option<Kopecks>),
     CashbackCap(Option<Kopecks>),
@@ -73,6 +79,10 @@ pub enum RuleError {
     RateTooHigh(u32),
     #[error("a limit cannot be negative")]
     NegativeLimit,
+    #[error(transparent)]
+    InvalidMcc(#[from] InvalidMcc),
+    #[error("a rule has an MCC or a category, not both")]
+    MccAndCategory,
 }
 
 /// Checks a field value before it is stored.
@@ -84,30 +94,45 @@ pub fn validate(input: &RuleInput) -> Result<(), RuleError> {
         {
             Err(RuleError::NegativeLimit)
         }
+        RuleInput::Mcc(text) => {
+            parse_mcc(text.as_deref())?;
+            Ok(())
+        }
         _ => Ok(()),
     }
 }
 
-/// The rule an entry of this month, card and category falls under: the card's rule for the
-/// category, else the card's «на всё» rule (D21).
+/// A rule has an MCC, or a category, or neither.
+pub fn check_scope(category: Option<CategoryId>, mcc: Option<Mcc>) -> Result<(), RuleError> {
+    if category.is_some() && mcc.is_some() {
+        return Err(RuleError::MccAndCategory);
+    }
+    Ok(())
+}
+
+/// The rule an entry of this month, card, category and MCC falls under: the card's rule for the
+/// MCC, else for the category, else its «на всё» rule (D20, D21).
 pub fn rule_for(
     rules: &[CashbackRule],
     month: Month,
     product: ProductId,
     category: Option<CategoryId>,
+    mcc: Option<Mcc>,
 ) -> Option<&CashbackRule> {
     let mut of_card = rules
         .iter()
         .filter(|r| r.month == month && r.product_id == product);
-    let exact = category.and_then(|c| of_card.clone().find(|r| r.category_id == Some(c)));
-    exact.or_else(|| of_card.find(|r| r.category_id.is_none()))
+    let by_mcc = mcc.and_then(|m| of_card.clone().find(|r| r.mcc == Some(m)));
+    by_mcc
+        .or_else(|| category.and_then(|c| of_card.clone().find(|r| r.category_id == Some(c))))
+        .or_else(|| of_card.find(|r| r.category_id.is_none() && r.mcc.is_none()))
 }
 
-/// The rule of an entry, if its card has one for its category.
+/// The rule of an entry, if its card has one for its MCC or category.
 pub fn rule_of_entry<'a>(rules: &'a [CashbackRule], entry: &Entry) -> Option<&'a CashbackRule> {
     entry
         .product_id
-        .and_then(|p| rule_for(rules, entry.month, p, entry.category_id))
+        .and_then(|p| rule_for(rules, entry.month, p, entry.category_id, entry.mcc))
 }
 
 /// What a rule has used so far.
@@ -260,15 +285,16 @@ pub struct CardSuggestion {
     pub remaining_cashback: Option<Kopecks>,
 }
 
-/// Cards with a rule for `category` in `month`, best first: by the cashback the amount would
-/// earn with what is left of the limits, or by rate when the amount is not known yet; cards
-/// whose limit is used up go last. `usage` comes from [`allocate`] over the month without the
+/// Cards with a rule for `category` or `mcc` in `month`, best first: by the cashback the amount
+/// would earn with what is left of the limits, or by rate when the amount is not known yet;
+/// cards whose limit is used up go last. `usage` comes from [`allocate`] over the month without the
 /// entry being typed.
 pub fn suggest_cards(
     rules: &[CashbackRule],
     usage: &[RuleUsage],
     month: Month,
     category: Option<CategoryId>,
+    mcc: Option<Mcc>,
     amount: Option<Kopecks>,
     rounding: impl Fn(ProductId) -> Rounding,
 ) -> Vec<CardSuggestion> {
@@ -283,7 +309,7 @@ pub fn suggest_cards(
     let mut suggestions: Vec<CardSuggestion> = products
         .into_iter()
         .filter_map(|product| {
-            let rule = rule_for(rules, month, product, category)?;
+            let rule = rule_for(rules, month, product, category, mcc)?;
             let used = usage.iter().find(|u| u.rule_id == rule.id);
             let tally = used.map_or_else(
                 || rule.opening(rounding(product)),
@@ -343,6 +369,18 @@ mod tests {
             cashback_cap: None,
             spent_adjustment: Kopecks::ZERO,
             notes: None,
+            mcc: None,
+        }
+    }
+
+    fn mcc(code: &str) -> Mcc {
+        code.parse().unwrap()
+    }
+
+    fn mcc_rule(id: RuleId, product: ProductId, code: &str, bp: u32) -> CashbackRule {
+        CashbackRule {
+            mcc: Some(mcc(code)),
+            ..rule(id, product, None, bp)
         }
     }
 
@@ -383,20 +421,129 @@ mod tests {
             rule(2, CARD, Some(GROCERIES), 500),
         ];
         assert_eq!(
-            rule_for(&rules, july(), CARD, Some(GROCERIES)).map(|r| r.id),
+            rule_for(&rules, july(), CARD, Some(GROCERIES), None).map(|r| r.id),
             Some(2)
         );
         assert_eq!(
-            rule_for(&rules, july(), CARD, Some(FOOD)).map(|r| r.id),
+            rule_for(&rules, july(), CARD, Some(FOOD), None).map(|r| r.id),
             Some(1)
         );
-        assert_eq!(rule_for(&rules, july(), CARD, None).map(|r| r.id), Some(1));
-        assert_eq!(rule_for(&rules, july(), OTHER_CARD, Some(FOOD)), None);
+        assert_eq!(
+            rule_for(&rules, july(), CARD, None, None).map(|r| r.id),
+            Some(1)
+        );
+        assert_eq!(rule_for(&rules, july(), OTHER_CARD, Some(FOOD), None), None);
         let august = "2026-08".parse().unwrap();
-        assert_eq!(rule_for(&rules, august, CARD, Some(FOOD)), None);
+        assert_eq!(rule_for(&rules, august, CARD, Some(FOOD), None), None);
 
         let only_category = [rule(2, CARD, Some(GROCERIES), 500)];
-        assert_eq!(rule_for(&only_category, july(), CARD, Some(FOOD)), None);
+        assert_eq!(
+            rule_for(&only_category, july(), CARD, Some(FOOD), None),
+            None
+        );
+    }
+
+    #[test]
+    fn mcc_rule_wins_over_category_and_everything_rules() {
+        let rules = [
+            rule(1, CARD, None, 100),
+            rule(2, CARD, Some(GROCERIES), 500),
+            mcc_rule(3, CARD, "5411", 700),
+            mcc_rule(4, OTHER_CARD, "5411", 900),
+        ];
+        let chosen = |category, code: Option<&str>| {
+            rule_for(&rules, july(), CARD, category, code.map(mcc)).map(|r| r.id)
+        };
+        // MCC, whatever the category says.
+        assert_eq!(chosen(Some(GROCERIES), Some("5411")), Some(3));
+        assert_eq!(chosen(None, Some("5411")), Some(3));
+        // Another code: on to the category, then to «на всё».
+        assert_eq!(chosen(Some(GROCERIES), Some("0742")), Some(2));
+        assert_eq!(chosen(Some(FOOD), Some("0742")), Some(1));
+        assert_eq!(chosen(None, Some("0742")), Some(1));
+        // No code at all: as before.
+        assert_eq!(chosen(Some(GROCERIES), None), Some(2));
+        assert_eq!(chosen(None, None), Some(1));
+    }
+
+    #[test]
+    fn mcc_rule_is_not_an_everything_rule() {
+        let rules = [mcc_rule(1, CARD, "5411", 700)];
+        assert_eq!(rule_for(&rules, july(), CARD, None, None), None);
+        assert_eq!(rule_for(&rules, july(), CARD, Some(FOOD), None), None);
+        assert_eq!(
+            rule_for(&rules, july(), CARD, Some(FOOD), Some(mcc("0742"))),
+            None
+        );
+    }
+
+    #[test]
+    fn limits_of_an_mcc_rule_go_in_row_order_apart_from_the_others() {
+        let mut groceries = rule(1, CARD, Some(GROCERIES), 500);
+        groceries.spend_cap = Some(rub(10_000));
+        let mut cafe = mcc_rule(2, CARD, "5814", 1000);
+        cafe.cashback_cap = Some(rub(150));
+        let rules = [groceries, cafe];
+
+        let in_cafe = |id, amount| {
+            let mut e = by_rule(id, CARD, Some(GROCERIES), amount);
+            e.mcc = Some(mcc("5814"));
+            e
+        };
+        let entries = [
+            in_cafe(1, rub(1000)),
+            by_rule(2, CARD, Some(GROCERIES), rub(1000)),
+            in_cafe(3, rub(1000)),
+            in_cafe(4, rub(1000)),
+        ];
+        let a = allocate(&entries, &rules, floor_rub);
+        assert_eq!(amount_of(&a, 1), rub(100));
+        assert_eq!(amount_of(&a, 2), rub(50));
+        // 150 ₽ of the MCC rule's limit: the rest of it, then nothing.
+        assert_eq!(amount_of(&a, 3), rub(50));
+        assert_eq!(amount_of(&a, 4), Kopecks::ZERO);
+        // The category rule does not count the rows with a code of their own.
+        assert_eq!(a.usage[0].spent, rub(1000));
+        assert_eq!(a.usage[0].entries, 1);
+        assert_eq!(a.usage[1].spent, rub(3000));
+        assert_eq!(a.usage[1].cashback, rub(150));
+        assert_eq!(a.usage[1].entries, 3);
+        assert!(a.usage[1].is_exhausted());
+    }
+
+    #[test]
+    fn a_rule_has_an_mcc_or_a_category() {
+        assert_eq!(check_scope(None, None), Ok(()));
+        assert_eq!(check_scope(Some(FOOD), None), Ok(()));
+        assert_eq!(check_scope(None, Some(mcc("5411"))), Ok(()));
+        assert_eq!(
+            check_scope(Some(FOOD), Some(mcc("5411"))),
+            Err(RuleError::MccAndCategory)
+        );
+    }
+
+    #[test]
+    fn suggestions_follow_the_mcc_of_the_row() {
+        let rules = [
+            rule(1, CARD, Some(GROCERIES), 300),
+            mcc_rule(2, OTHER_CARD, "5411", 700),
+        ];
+        let by_category =
+            suggest_cards(&rules, &[], july(), Some(GROCERIES), None, None, floor_rub);
+        assert_eq!(by_category.len(), 1);
+        assert_eq!(by_category[0].product_id, CARD);
+
+        let by_code = suggest_cards(
+            &rules,
+            &[],
+            july(),
+            Some(GROCERIES),
+            Some(mcc("5411")),
+            None,
+            floor_rub,
+        );
+        let order: Vec<_> = by_code.iter().map(|c| c.product_id).collect();
+        assert_eq!(order, vec![OTHER_CARD, CARD]);
     }
 
     #[test]
@@ -618,7 +765,15 @@ mod tests {
         let usage = allocate(&entries, &rules, floor_rub).usage;
 
         // No amount yet: by rate.
-        let s = suggest_cards(&rules, &usage, july(), Some(GROCERIES), None, floor_rub);
+        let s = suggest_cards(
+            &rules,
+            &usage,
+            july(),
+            Some(GROCERIES),
+            None,
+            None,
+            floor_rub,
+        );
         let order: Vec<_> = s.iter().map(|c| c.product_id).collect();
         assert_eq!(order, vec![CARD, 3, OTHER_CARD]);
         assert_eq!(s[0].remaining_cashback, Some(rub(50)));
@@ -630,6 +785,7 @@ mod tests {
             &usage,
             july(),
             Some(GROCERIES),
+            None,
             Some(rub(2000)),
             floor_rub,
         );
@@ -646,13 +802,32 @@ mod tests {
         // Card 1 used up: last, whatever its rate.
         let entries = [by_rule(1, CARD, Some(GROCERIES), rub(1000))];
         let usage = allocate(&entries, &rules, floor_rub).usage;
-        let s = suggest_cards(&rules, &usage, july(), Some(GROCERIES), None, floor_rub);
+        let s = suggest_cards(
+            &rules,
+            &usage,
+            july(),
+            Some(GROCERIES),
+            None,
+            None,
+            floor_rub,
+        );
         let order: Vec<_> = s.iter().map(|c| (c.product_id, c.exhausted)).collect();
         assert_eq!(order, vec![(3, false), (OTHER_CARD, false), (CARD, true)]);
 
         // No rules in another month: no suggestions.
         let august = "2026-08".parse().unwrap();
-        assert!(suggest_cards(&rules, &usage, august, Some(GROCERIES), None, floor_rub).is_empty());
+        assert!(
+            suggest_cards(
+                &rules,
+                &usage,
+                august,
+                Some(GROCERIES),
+                None,
+                None,
+                floor_rub
+            )
+            .is_empty()
+        );
     }
 
     #[test]
@@ -666,6 +841,12 @@ mod tests {
             Err(RuleError::NegativeLimit)
         );
         assert_eq!(validate(&RuleInput::CashbackCap(None)), Ok(()));
+        assert_eq!(validate(&RuleInput::Mcc(Some("0742".into()))), Ok(()));
+        assert_eq!(validate(&RuleInput::Mcc(None)), Ok(()));
+        assert_eq!(
+            validate(&RuleInput::Mcc(Some("742".into()))),
+            Err(RuleError::InvalidMcc(InvalidMcc("742".into())))
+        );
         let op: RuleOp = serde_json::from_str(
             r#"{"op":"edit","id":4,"edit":{"field":"spendCap","value":300000}}"#,
         )

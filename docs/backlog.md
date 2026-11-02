@@ -28,7 +28,5 @@ model goes here, not into code). Newest first.
 
 ## Later
 
-- MCC codes: rules by MCC and an MCC column in the journal (D20).
-
 - `PRAGMA cipher_memory_security` — wipe SQLCipher memory allocations (performance cost).
 - Calculator «кэшбэк vs проценты по накопительному» (PLAN §3).
