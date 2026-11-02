@@ -66,11 +66,17 @@ fn memory_is_wiped_after_create_and_open() {
     let dir = TempDir::new().unwrap();
     let path = file_in(&dir);
     let vault = Vault::create(&path, PASSWORD).unwrap();
-    assert_eq!(vault.cipher_setting(CipherSetting::MemorySecurity).unwrap(), "1");
+    assert_eq!(
+        vault.cipher_setting(CipherSetting::MemorySecurity).unwrap(),
+        "1"
+    );
     vault.close().unwrap();
 
     let vault = Vault::open(&path, PASSWORD).unwrap();
-    assert_eq!(vault.cipher_setting(CipherSetting::MemorySecurity).unwrap(), "1");
+    assert_eq!(
+        vault.cipher_setting(CipherSetting::MemorySecurity).unwrap(),
+        "1"
+    );
 }
 
 #[test]
