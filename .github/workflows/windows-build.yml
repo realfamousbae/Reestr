@@ -64,7 +64,7 @@ jobs:
         with:
           tagName: ${{ env.RELEASE_TAG }}
           releaseName: "Реестр ${{ env.RELEASE_TAG }}"
-          releaseBody: "Установщики для Windows: .exe (рекомендуется) и .msi; приложение для Android — .apk. Как установить, пройти предупреждение SmartScreen и начать работу — в инструкции: https://reestr-docs.up.railway.app/start/install/"
+          releaseBody: "Установщики для Windows: .exe (рекомендуется) и .msi. Как установить, пройти предупреждение SmartScreen и начать работу — в инструкции: https://reestr-docs.up.railway.app/start/install/"
           # A manual run tags the commit it built.
           releaseCommitish: ${{ github.sha }}
           releaseDraft: false

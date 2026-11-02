@@ -7,7 +7,7 @@ use rusqlite::{Connection, params};
 
 use crate::error::StorageError;
 
-const MIGRATIONS: &[&str] = &[
+pub(crate) const MIGRATIONS: &[&str] = &[
     // 1: file metadata (PLAN §4.3).
     "CREATE TABLE meta (
         key   TEXT PRIMARY KEY NOT NULL,
@@ -245,6 +245,25 @@ const MIGRATIONS: &[&str] = &[
         rev         INTEGER NOT NULL CHECK (rev > 0),
         fingerprint TEXT    NOT NULL
     ) STRICT;",
+    // 8: the exchange with the phone is gone (D41). Copies for the phone and the phone's files
+    // are refused before the migrations, so only main files get here. The log keeps its old
+    // `phone` actions and `phone_taken` rows: undo reaches this session's actions only, and
+    // none of those can exist yet.
+    "DROP TABLE phone_change;
+    DROP TABLE phone_taken;
+    DELETE FROM meta WHERE key IN ('file_id', 'snapshot_seq', 'role');",
+    // 9: the available balance the bank showed for a credit card, with the date it was valid
+    // for (PLAN §7). The core keeps them set together; the columns are written one at a time.
+    "ALTER TABLE credit_terms ADD COLUMN manual_available INTEGER;
+    ALTER TABLE credit_terms ADD COLUMN manual_available_on TEXT;",
+    // 10: MCC of an entry and of a rule (D20), four digits as text: leading zeros matter. A rule
+    // has an MCC, a category or neither (the core checks both), and existing rules stay as they
+    // are: no code. The key keeps one rule per month, card and scope.
+    "ALTER TABLE entry ADD COLUMN mcc TEXT;
+    ALTER TABLE cashback_rule ADD COLUMN mcc TEXT;
+    DROP INDEX cashback_rule_key;
+    CREATE UNIQUE INDEX cashback_rule_key
+        ON cashback_rule (month, product_id, IFNULL(category_id, 0), IFNULL(mcc, ''));",
 ];
 
 /// The schema version this build writes and reads.
@@ -356,26 +375,129 @@ mod tests {
         assert_eq!(count, 0);
     }
 
+    /// Version 8 removes the exchange and nothing else, also from a file that took rows from
+    /// the phone (D41).
     #[test]
-    fn version_7_gives_every_file_its_own_id_once() {
-        let id_of = |conn: &Connection| -> String {
-            conn.query_row("SELECT value FROM meta WHERE key = 'file_id'", [], |r| {
-                r.get(0)
-            })
-            .unwrap()
-        };
-        let mut old = Connection::open_in_memory().unwrap();
-        for sql in &MIGRATIONS[..6] {
-            old.execute_batch(sql).unwrap();
+    fn version_8_removes_the_phone_exchange_and_keeps_the_journal() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        for sql in &MIGRATIONS[..7] {
+            conn.execute_batch(sql).unwrap();
         }
-        old.pragma_update(None, "user_version", 6).unwrap();
-        migrate(&mut old).unwrap();
-        let mut other = Connection::open_in_memory().unwrap();
-        migrate(&mut other).unwrap();
-        let id = id_of(&old);
-        assert_eq!(id.len(), 32);
-        assert_ne!(id, id_of(&other));
-        migrate(&mut old).unwrap();
-        assert_eq!(id_of(&old), id);
+        conn.pragma_update(None, "user_version", 7).unwrap();
+        conn.execute_batch(
+            "INSERT INTO meta (key, value) VALUES ('snapshot_seq', '2'), ('card_suggestions', 'on');
+             INSERT INTO entry (month, position, title, title_key, amount, import_key,
+                                created_at, updated_at)
+                 VALUES ('2026-07', 1, 'Обед', 'обед', 45000, 'phone-1', '', '');
+             INSERT INTO phone_taken (key, rev, fingerprint) VALUES ('phone-1', 1, 'abc');
+             INSERT INTO phone_change (key, entry_id, rev) VALUES ('phone-1', 1, 1);
+             INSERT INTO change_op (ts, label) VALUES ('', 'phone');
+             INSERT INTO change_log (op_id, ts, entity, entity_id, field, new_value)
+                 VALUES (1, '', 'phone_taken', 1, '*', '{}'), (1, '', 'entry', 1, '*', '{}');",
+        )
+        .unwrap();
+        migrate(&mut conn).unwrap();
+
+        assert_eq!(user_version(&conn).unwrap(), SCHEMA_VERSION);
+        let row: (String, i64, String) = conn
+            .query_row("SELECT title, amount, import_key FROM entry", [], |r| {
+                Ok((r.get(0)?, r.get(1)?, r.get(2)?))
+            })
+            .unwrap();
+        assert_eq!(row, ("Обед".to_owned(), 45000, "phone-1".to_owned()));
+        for table in ["phone_change", "phone_taken"] {
+            assert!(conn.prepare(&format!("SELECT 1 FROM {table}")).is_err());
+        }
+        let count = |sql: &str| -> i64 { conn.query_row(sql, [], |r| r.get(0)).unwrap() };
+        assert_eq!(
+            count(
+                "SELECT count(*) FROM meta
+                 WHERE key IN ('file_id', 'snapshot_seq', 'role')"
+            ),
+            0
+        );
+        assert_eq!(
+            count("SELECT count(*) FROM meta WHERE key = 'card_suggestions'"),
+            1
+        );
+        // The old log stays as it was.
+        assert_eq!(count("SELECT count(*) FROM change_log"), 2);
+    }
+
+    /// Version 9 adds the entered balance to the cards as they are: nothing entered yet.
+    #[test]
+    fn version_9_keeps_the_card_terms_and_leaves_the_balance_empty() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        for sql in &MIGRATIONS[..8] {
+            conn.execute_batch(sql).unwrap();
+        }
+        conn.pragma_update(None, "user_version", 8).unwrap();
+        conn.execute_batch(
+            "INSERT INTO product (short_name, name_key) VALUES ('Газпром КР', 'газпром кр');
+             INSERT INTO credit_terms (product_id, credit_limit, default_grace_days)
+                 VALUES (1, 15000000, 100);",
+        )
+        .unwrap();
+        migrate(&mut conn).unwrap();
+
+        assert_eq!(user_version(&conn).unwrap(), SCHEMA_VERSION);
+        let row: (i64, i64, Option<i64>, Option<String>) = conn
+            .query_row(
+                "SELECT credit_limit, default_grace_days, manual_available, manual_available_on
+                 FROM credit_terms WHERE product_id = 1",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
+            )
+            .unwrap();
+        assert_eq!(row, (15_000_000, 100, None, None));
+    }
+
+    /// Version 10 gives rules and entries an empty MCC: every rule stays unique under the new
+    /// key and an entry falls under the same rule as before.
+    #[test]
+    fn version_10_keeps_the_rules_unique_and_matched_the_same_way() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        for sql in &MIGRATIONS[..9] {
+            conn.execute_batch(sql).unwrap();
+        }
+        conn.pragma_update(None, "user_version", 9).unwrap();
+        conn.execute_batch(
+            "INSERT INTO product (short_name, name_key) VALUES ('Райф А', 'райф а');
+             INSERT INTO category (name, name_key) VALUES ('продукты', 'продукты');
+             INSERT INTO cashback_rule (month, product_id, category_id, rate_bp)
+                 VALUES ('2026-07', 1, 1, 500), ('2026-07', 1, NULL, 100);
+             INSERT INTO entry (month, position, title, title_key, category_id, product_id, amount,
+                                created_at, updated_at)
+                 VALUES ('2026-07', 1, 'Лента', 'лента', 1, 1, 100000, '', ''),
+                        ('2026-07', 2, 'Кино', 'кино', NULL, 1, 50000, '', '');",
+        )
+        .unwrap();
+        migrate(&mut conn).unwrap();
+        assert_eq!(user_version(&conn).unwrap(), SCHEMA_VERSION);
+
+        let july = "2026-07".parse().unwrap();
+        let rules = crate::rules::rules_of(&conn, july).unwrap();
+        let entries = crate::journal::entries_of(&conn, july).unwrap();
+        assert!(rules.iter().all(|r| r.mcc.is_none()));
+        assert!(entries.iter().all(|e| e.mcc.is_none()));
+        let rates: Vec<_> = entries
+            .iter()
+            .map(|e| reestr_core::rule_of_entry(&rules, e).map(|r| r.rate.0))
+            .collect();
+        assert_eq!(rates, [Some(500), Some(100)]);
+
+        // The key still refuses a second rule of a scope, with or without a category.
+        let add = |category: Option<i64>, mcc: Option<&str>| {
+            conn.execute(
+                "INSERT INTO cashback_rule (month, product_id, category_id, mcc)
+                 VALUES ('2026-07', 1, ?1, ?2)",
+                params![category, mcc],
+            )
+        };
+        assert!(add(Some(1), None).is_err());
+        assert!(add(None, None).is_err());
+        add(None, Some("0742")).unwrap();
+        add(None, Some("5411")).unwrap();
+        assert!(add(None, Some("0742")).is_err());
     }
 }

@@ -4,8 +4,8 @@ use std::collections::{BTreeSet, HashMap, HashSet};
 
 use reestr_core::date::{format_iso, parse_iso};
 use reestr_core::{
-    Cashback, CashbackSource, DictKind, EditInput, Entry, EntryEdit, EntryId, JournalOp, Kopecks,
-    Month, ProductId, RateBp, Rounding, TemplateId, allocate, name_key,
+    Cashback, CashbackSource, DictKind, EditError, EditInput, Entry, EntryEdit, EntryId, JournalOp,
+    Kopecks, Mcc, Month, ProductId, RateBp, Rounding, TemplateId, allocate, name_key, parse_mcc,
 };
 use rusqlite::types::Value;
 use rusqlite::{Connection, OptionalExtension, Row as SqlRow, params};
@@ -13,7 +13,6 @@ use serde::Serialize;
 
 use crate::dict::{Created, Resolver};
 use crate::error::StorageError;
-use crate::exchange::{PHONE_START, Role, ensure_phone_rows, mark_phone_changes, new_phone_key};
 use crate::history::{self, Direction, Recorder, Replayed, Row, Table, now};
 use crate::vault::Vault;
 
@@ -29,7 +28,26 @@ pub struct ApplyOutcome {
 
 pub(crate) const ENTRY_COLUMNS: &str = "id, month, title, category_id, is_regular, \
      participant_id, date, amount, cashback_amount, cashback_rate_bp, cashback_source, \
-     product_id, grace_period_id";
+     product_id, grace_period_id, mcc";
+
+/// An MCC column of `r`; what was stored passed the core's check.
+pub(crate) fn read_mcc(r: &SqlRow<'_>, index: usize) -> rusqlite::Result<Option<Mcc>> {
+    r.get::<_, Option<String>>(index)?
+        .map(|code| {
+            code.parse().map_err(|e| {
+                rusqlite::Error::FromSqlConversionFailure(
+                    index,
+                    rusqlite::types::Type::Text,
+                    Box::new(e),
+                )
+            })
+        })
+        .transpose()
+}
+
+pub(crate) fn mcc_value(mcc: Option<Mcc>) -> Value {
+    mcc.map_or(Value::Null, |m| Value::Text(m.to_string()))
+}
 
 pub(crate) fn read_entry(r: &SqlRow<'_>) -> rusqlite::Result<Entry> {
     let month: Month = r.get::<_, String>(1)?.parse().map_err(|e| {
@@ -61,11 +79,12 @@ pub(crate) fn read_entry(r: &SqlRow<'_>) -> rusqlite::Result<Entry> {
         cashback,
         product_id: r.get(11)?,
         grace_period_id: r.get(12)?,
+        mcc: read_mcc(r, 13)?,
     })
 }
 
 /// The columns of `entry` that edits change, as values.
-fn entry_values(e: &Entry) -> [(&'static str, Value); 12] {
+fn entry_values(e: &Entry) -> [(&'static str, Value); 13] {
     let opt = |v: Option<i64>| v.map_or(Value::Null, Value::Integer);
     [
         ("title", Value::Text(e.title.clone())),
@@ -90,6 +109,7 @@ fn entry_values(e: &Entry) -> [(&'static str, Value); 12] {
         ),
         ("product_id", opt(e.product_id)),
         ("grace_period_id", opt(e.grace_period_id)),
+        ("mcc", mcc_value(e.mcc)),
     ]
 }
 
@@ -161,12 +181,15 @@ fn resolve_edit(
         EditInput::Card(c) => {
             EntryEdit::Product(resolver.resolve(DictKind::Product, c.as_deref())?)
         }
+        EditInput::Mcc(m) => {
+            EntryEdit::Mcc(parse_mcc(m.as_deref()).map_err(EditError::InvalidMcc)?)
+        }
     })
 }
 
 /// Applies edits to an entry in memory with the journal rules: autofill from the last entry
 /// with the same title, a category's «регулярная по умолчанию», cashback by the card's
-/// rounding. Cashback is recomputed only when its inputs change (amount, card, category, a
+/// rounding. Cashback is recomputed only when its inputs change (amount, card, category, MCC, a
 /// cleared `%` or «Кэшбэк» cell), so an unrelated edit never moves an old cashback. A cashback
 /// that was not typed then follows the month's rules; [`reallocate`] fills it in.
 pub(crate) fn apply_edits(
@@ -187,6 +210,7 @@ pub(crate) fn apply_edits(
                 | EntryEdit::Cashback(None)
                 | EntryEdit::Product(_)
                 | EntryEdit::Category(_)
+                | EntryEdit::Mcc(_)
         );
         entry.apply(edit)?;
     }
@@ -194,9 +218,9 @@ pub(crate) fn apply_edits(
         && !entry.title.is_empty()
         && let Some(last) = last_with_title(conn, &entry.title, entry.id)?
     {
-        let before = (entry.product_id, entry.category_id);
+        let before = (entry.product_id, entry.category_id, entry.mcc);
         entry.autofill_from(&last);
-        cashback_inputs |= (entry.product_id, entry.category_id) != before;
+        cashback_inputs |= (entry.product_id, entry.category_id, entry.mcc) != before;
     }
     if category_typed
         && !entry.is_regular
@@ -368,8 +392,6 @@ impl Vault {
         label: &str,
         action: impl FnOnce(&Recorder<'_>) -> Result<T, StorageError>,
     ) -> Result<T, StorageError> {
-        self.role.allows(label)?;
-        let role = self.role;
         let tx = self.conn.transaction()?;
         let (result, op_id) = {
             let rec = Recorder::begin(&tx, label)?;
@@ -382,8 +404,6 @@ impl Vault {
         )?;
         if changes == 0 {
             tx.execute("DELETE FROM change_op WHERE id = ?1", [op_id])?;
-        } else if role == Role::Phone && label != PHONE_START {
-            mark_phone_changes(&tx, op_id)?;
         }
         tx.commit()?;
         if changes > 0 {
@@ -406,11 +426,6 @@ impl Vault {
     /// Entries of a month in row order.
     pub fn entries(&self, month: Month) -> Result<Vec<Entry>, StorageError> {
         entries_of(&self.conn, month)
-    }
-
-    /// The most recent entry with this title: what a new row with it gets filled from.
-    pub fn last_titled(&self, title: &str) -> Result<Option<Entry>, StorageError> {
-        last_with_title(&self.conn, title, 0)
     }
 
     /// Distinct titles, most recently used first: the history for autocomplete.
@@ -445,18 +460,7 @@ impl Vault {
         } else {
             "edit"
         };
-        let role = self.role;
         self.record(label, |rec| {
-            if role == Role::Phone {
-                let edited: Vec<EntryId> = ops
-                    .iter()
-                    .filter_map(|o| match o {
-                        JournalOp::Edit { id, .. } => Some(*id),
-                        JournalOp::Append { .. } => None,
-                    })
-                    .collect();
-                ensure_phone_rows(rec.tx(), &edited)?;
-            }
             let mut resolver = Resolver::new(rec);
             let mut appended = Vec::new();
             for op in ops {
@@ -475,8 +479,7 @@ impl Vault {
                             .map(|e| resolve_edit(&mut resolver, e))
                             .collect::<Result<Vec<_>, _>>()?;
                         apply_edits(rec.tx(), &mut entry, edits)?;
-                        let key = new_phone_key(rec.tx(), role)?;
-                        appended.push(insert_entry(rec, &entry, key)?);
+                        appended.push(insert_entry(rec, &entry, None)?);
                     }
                 }
             }
@@ -490,11 +493,7 @@ impl Vault {
 
     /// Deletes entries as one undoable action. Returns how many were deleted.
     pub fn delete_entries(&mut self, ids: &[EntryId]) -> Result<usize, StorageError> {
-        let role = self.role;
         self.record("delete", |rec| {
-            if role == Role::Phone {
-                ensure_phone_rows(rec.tx(), ids)?;
-            }
             let mut deleted = 0;
             let mut months = BTreeSet::new();
             for id in ids {
@@ -519,7 +518,6 @@ impl Vault {
         ids: &[TemplateId],
     ) -> Result<Vec<EntryId>, StorageError> {
         let templates = self.dictionaries()?.templates;
-        let role = self.role;
         self.record("templates", |rec| {
             let mut appended = Vec::new();
             for id in ids {
@@ -539,8 +537,7 @@ impl Vault {
                     edits.push(EntryEdit::Amount(amount));
                 }
                 apply_edits(rec.tx(), &mut entry, edits)?;
-                let key = new_phone_key(rec.tx(), role)?;
-                appended.push(insert_entry(rec, &entry, key)?);
+                appended.push(insert_entry(rec, &entry, None)?);
             }
             reallocate(rec, month)?;
             Ok(appended)
@@ -571,9 +568,6 @@ impl Vault {
         };
         let tx = self.conn.transaction()?;
         let replayed = history::replay(&tx, op_id, direction)?;
-        if self.role == Role::Phone {
-            mark_phone_changes(&tx, op_id)?;
-        }
         tx.commit()?;
         self.history.moved(direction);
         Ok(Some(replayed))

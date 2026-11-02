@@ -1,5 +1,4 @@
 use std::collections::BTreeSet;
-use std::path::PathBuf;
 use std::sync::{Mutex, MutexGuard};
 
 use reestr_core::Month;
@@ -17,8 +16,6 @@ pub struct AppState {
     pub extra_months: Mutex<BTreeSet<Month>>,
     /// A workbook read for the import wizard, between preview and apply.
     pub import: Mutex<Option<Workbook>>,
-    /// The exchange folder with the phone (D39), chosen on this computer.
-    pub exchange: Mutex<Option<PathBuf>>,
 }
 
 pub fn lock<T>(mutex: &Mutex<T>) -> Result<MutexGuard<'_, T>, CommandError> {

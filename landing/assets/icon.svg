@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- Reestr app icon: the letter Р over a double rule, the bookkeeping mark of a total. -->
+  <rect width="1024" height="1024" rx="224" fill="#2346B0"/>
+  <path fill="#FFFFFF" fill-rule="evenodd"
+        d="M287 190 H547 A190 190 0 0 1 547 570 H427 V690 H287 Z M427 310 H532 A70 70 0 0 1 532 450 H427 Z"/>
+  <rect x="232" y="760" width="560" height="40" rx="6" fill="#FFFFFF"/>
+  <rect x="232" y="840" width="560" height="40" rx="6" fill="#FFFFFF"/>
+</svg>

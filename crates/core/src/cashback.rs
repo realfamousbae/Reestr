@@ -188,7 +188,7 @@ pub fn effective_rate_bp(amount: Kopecks, cashback: Kopecks) -> Option<i64> {
 }
 
 /// Integer division rounding half away from zero. `denominator` must be positive.
-fn div_half_away(numerator: i128, denominator: i128) -> i128 {
+pub(crate) fn div_half_away(numerator: i128, denominator: i128) -> i128 {
     debug_assert!(denominator > 0);
     let quotient = numerator / denominator;
     let remainder = numerator % denominator;
@@ -199,7 +199,7 @@ fn div_half_away(numerator: i128, denominator: i128) -> i128 {
     }
 }
 
-fn saturate_i64(value: i128) -> i64 {
+pub(crate) fn saturate_i64(value: i128) -> i64 {
     i64::try_from(value).unwrap_or(if value < 0 { i64::MIN } else { i64::MAX })
 }
 

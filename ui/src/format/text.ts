@@ -35,6 +35,13 @@ export function matchOption(input: string, options: readonly string[]): Matched 
   return { value: text, known: false };
 }
 
+/** An MCC: exactly four digits, kept as text for its leading zeros. Empty clears the cell. */
+export function parseMcc(text: string): Parsed<string | null> {
+  const code = text.trim();
+  if (code === "") return ok(null);
+  return /^[0-9]{4}$/.test(code) ? ok(code) : fail(`MCC — это 4 цифры, а не «${code}»`);
+}
+
 export function isKnown(value: string | null, options: readonly string[]): boolean {
   if (value === null) {
     return true;

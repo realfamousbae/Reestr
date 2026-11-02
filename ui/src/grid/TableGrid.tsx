@@ -14,6 +14,7 @@ import { useCallback, useMemo } from "react";
 import { cellThemes, gridTheme } from "../theme/gridTheme";
 import { useDraftRow } from "./drafts";
 import { type CellChange, pasteChanges } from "./edits";
+import { drawMarkerHeader } from "./markerHeader";
 import type { TableColumn, TableRow } from "./table";
 
 interface Props<R extends TableRow> {
@@ -135,6 +136,7 @@ export function TableGrid<R extends TableRow>({
             trailingRowOptions: { hint: newRowHint, sticky: true, tint: true },
           })}
       rowMarkers={{ kind: "clickable-number", width: 48 }}
+      drawHeader={drawMarkerHeader}
       cellActivationBehavior="double-click"
       smoothScrollX
       smoothScrollY

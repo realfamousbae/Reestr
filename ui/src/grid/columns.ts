@@ -1,4 +1,5 @@
-// The journal columns, in the order of the source sheet (PLAN §8). «№» is the row marker.
+// The journal columns, in the order of the source sheet (PLAN §8), then «MCC», which the source
+// sheet does not have (D20). «№» is the row marker.
 // Changing the order requires an explicit decision by the author.
 
 import { type GridCell, GridCellKind, type TextCell, type Theme } from "@glideapps/glide-data-grid";
@@ -8,7 +9,7 @@ import { formatDate, parseDate } from "../format/date";
 import { formatMoney, moneyEditText, parseMoney } from "../format/money";
 import { type Parsed, ok } from "../format/parsed";
 import { formatPercent, parsePercent, percentEditText } from "../format/percent";
-import { matchOption, parseYesNo } from "../format/text";
+import { matchOption, parseMcc, parseYesNo } from "../format/text";
 
 export type ColumnKey =
   | "title"
@@ -19,7 +20,8 @@ export type ColumnKey =
   | "amount"
   | "rate"
   | "cashback"
-  | "card";
+  | "card"
+  | "mcc";
 
 export interface ColumnSpec {
   key: ColumnKey;
@@ -38,6 +40,7 @@ export const COLUMNS: readonly ColumnSpec[] = [
   { key: "rate", title: "%", width: 72, align: "right" },
   { key: "cashback", title: "Кэшбэк", width: 96, align: "right" },
   { key: "card", title: "Карта", width: 124, align: "left" },
+  { key: "mcc", title: "MCC", width: 64, align: "right" },
 ];
 
 export interface CellContext {
@@ -79,6 +82,8 @@ export function displayText(entry: EntryView, key: ColumnKey): string {
       return entry.cashback === null ? "" : formatMoney(entry.cashback);
     case "card":
       return entry.card ?? "";
+    case "mcc":
+      return entry.mcc ?? "";
   }
 }
 
@@ -136,6 +141,10 @@ export function parseCell(key: ColumnKey, text: string, ctx: CellContext): Parse
       }
       const parsed = parseMoney(text);
       return parsed.ok ? ok({ field: "cashback", value: parsed.value }) : parsed;
+    }
+    case "mcc": {
+      const parsed = parseMcc(text);
+      return parsed.ok ? ok({ field: "mcc", value: parsed.value }) : parsed;
     }
   }
 }

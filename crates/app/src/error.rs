@@ -1,5 +1,5 @@
 use reestr_core::import::ImportError;
-use reestr_core::{EditError, ProductError, RuleError};
+use reestr_core::{CalcError, EditError, ProductError, RuleError};
 use reestr_storage::StorageError;
 use serde::Serialize;
 
@@ -52,6 +52,7 @@ impl From<StorageError> for CommandError {
             StorageError::Io(_) => Self::new("io", message),
             StorageError::Sqlite(_) => Self::new("database", message),
             StorageError::UnknownId(_) => Self::new("unknown_id", message),
+            StorageError::Edit(EditError::InvalidMcc(_)) => Self::new("invalid_mcc", message),
             StorageError::Edit(_) => Self::new("invalid_edit", message),
             StorageError::EmptyName => Self::new("empty_name", message),
             StorageError::DuplicateName(name) => {
@@ -64,16 +65,11 @@ impl From<StorageError> for CommandError {
             StorageError::CorruptLog => Self::new("corrupt_log", message),
             StorageError::Rule(RuleError::RateTooHigh(_)) => Self::new("invalid_edit", message),
             StorageError::Rule(RuleError::NegativeLimit) => Self::new("negative_limit", message),
+            StorageError::Rule(RuleError::InvalidMcc(_)) => Self::new("invalid_mcc", message),
+            StorageError::Rule(RuleError::MccAndCategory) => Self::new("mcc_and_category", message),
             StorageError::DuplicateRule => Self::new("duplicate_rule", message),
             StorageError::Export(_) => Self::new("export_failed", message),
-            StorageError::PhoneFile => Self::new("phone_file", message),
-            StorageError::SnapshotFile => Self::new("snapshot_file", message),
-            StorageError::NotFromPhone => Self::new("not_from_phone", message),
-            StorageError::NotForPhone => Self::new("not_for_phone", message),
-            StorageError::OtherFile => Self::new("other_file", message),
-            StorageError::OlderCopy => Self::new("older_copy", message),
-            StorageError::ComputerOnly => Self::new("computer_only", message),
-            StorageError::NotPhoneRow => Self::new("not_phone_row", message),
+            StorageError::PhoneCopy => Self::new("phone_copy", message),
             StorageError::Product(error) => {
                 let code = match error {
                     ProductError::EndBeforeStart => "end_before_start",
@@ -83,6 +79,7 @@ impl From<StorageError> for CommandError {
                     ProductError::DaysNotPositive => "days_not_positive",
                     ProductError::EmptyTitle => "empty_title",
                     ProductError::NoTranche => "no_tranche",
+                    ProductError::AvailableWithoutDate => "available_without_date",
                 };
                 Self::new(code, message)
             }
@@ -92,7 +89,11 @@ impl From<StorageError> for CommandError {
 
 impl From<EditError> for CommandError {
     fn from(error: EditError) -> Self {
-        Self::new("invalid_edit", error.to_string())
+        let code = match error {
+            EditError::InvalidMcc(_) => "invalid_mcc",
+            EditError::RateTooHigh(_) | EditError::NotFound(_) => "invalid_edit",
+        };
+        Self::new(code, error.to_string())
     }
 }
 
@@ -102,6 +103,18 @@ impl From<ImportError> for CommandError {
             ImportError::Read(_) => "workbook_unreadable",
             ImportError::NoServiceSheet => "workbook_no_service",
             ImportError::NoMonths => "workbook_no_months",
+        };
+        Self::new(code, error.to_string())
+    }
+}
+
+impl From<CalcError> for CommandError {
+    fn from(error: CalcError) -> Self {
+        let code = match error {
+            CalcError::NegativeAmount => "calc_negative_amount",
+            CalcError::AmountTooLarge => "calc_amount_too_large",
+            CalcError::RateTooHigh(_) => "calc_rate_too_high",
+            CalcError::TooManyDays(_) => "calc_too_many_days",
         };
         Self::new(code, error.to_string())
     }

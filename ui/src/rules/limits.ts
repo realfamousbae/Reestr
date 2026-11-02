@@ -3,9 +3,10 @@ import { formatMoney } from "../format/money";
 import { formatPercent } from "../format/percent";
 import { EVERYTHING } from "./specs";
 
-/** «Райф А · продукты 5%». */
+/** «Райф А · продукты 5%», «Райф А · MCC 5411 5%». */
 export function ruleTitle(rule: RuleView): string {
-  return `${rule.card} · ${rule.category ?? EVERYTHING} ${formatPercent(rule.rateBp)}`;
+  const scope = rule.mcc === null ? (rule.category ?? EVERYTHING) : `MCC ${rule.mcc}`;
+  return `${rule.card} · ${scope} ${formatPercent(rule.rateBp)}`;
 }
 
 /** What is left of a rule's limits, in words. */

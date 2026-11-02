@@ -8,7 +8,7 @@ import { formatPercent, parsePercent, percentEditText } from "../format/percent"
 import { plural } from "../format/text";
 import type { CellChange } from "../grid/edits";
 import { TableGrid } from "../grid/TableGrid";
-import { savingsText } from "./labels";
+import { availableCheckText, savingsText } from "./labels";
 import styles from "./ProductsSheet.module.css";
 import {
   type Batch,
@@ -41,6 +41,11 @@ function parseOptionalMoney(text: string): Parsed<number | null> {
   const parsed = parseMoney(text);
   if (!parsed.ok) return parsed;
   return parsed.value < 0 ? fail("Лимит не может быть отрицательным") : ok(parsed.value);
+}
+
+/** The balance as the bank shows it: over the limit it can be below zero. */
+function parseAvailable(text: string): Parsed<number | null> {
+  return text.trim() === "" ? ok(null) : parseMoney(text);
 }
 
 function parseDays(text: string): Parsed<number | null> {
@@ -174,6 +179,13 @@ function CreditPanel({ card, month, fontSize, onOps, onErrors, onDelete }: Credi
   const terms = (edit: ProductOp & { op: "creditTerms" }) => {
     onOps([edit]);
   };
+  const available = (amount: number | null, on: string | null) => {
+    terms({
+      op: "creditTerms",
+      product: card.productId,
+      edit: { field: "manualAvailable", value: { amount, on } },
+    });
+  };
 
   return (
     <section className={styles.panel} aria-label={card.card}>
@@ -212,6 +224,26 @@ function CreditPanel({ card, month, fontSize, onOps, onErrors, onDelete }: Credi
           }}
           onError={error}
         />
+        <TermField
+          label="Доступный остаток, ₽"
+          value={card.manualAvailable === null ? "" : moneyEditText(card.manualAvailable)}
+          parse={parseAvailable}
+          onSave={(value) => {
+            // The date goes with the value: today unless given. Clearing the value clears both.
+            available(value, value === null ? null : (card.manualAvailableOn ?? todayIso()));
+          }}
+          onError={error}
+        />
+        <TermField
+          label="на дату"
+          value={card.manualAvailableOn === null ? "" : formatDate(card.manualAvailableOn)}
+          parse={(text) => parseDate(text, todayIso().slice(0, 7))}
+          placeholder="ДД.ММ.ГГГГ"
+          onSave={(value) => {
+            available(card.manualAvailable, value);
+          }}
+          onError={error}
+        />
         <button
           type="button"
           className={styles.primary}
@@ -222,6 +254,14 @@ function CreditPanel({ card, month, fontSize, onOps, onErrors, onDelete }: Credi
           Начался новый грейс
         </button>
       </div>
+      {card.available !== null && (
+        <p className={card.available.difference === 0 ? styles.check : styles.checkDiffers}>
+          {availableCheckText(card.available)}
+        </p>
+      )}
+      {card.available === null && card.manualAvailable !== null && (
+        <p className={styles.check}>Для сверки с банком укажите кредитный лимит.</p>
+      )}
 
       <h3 className={styles.caption}>
         Грейсы <span>— даты из выписки банка; покупки попадают в грейс по своей дате</span>

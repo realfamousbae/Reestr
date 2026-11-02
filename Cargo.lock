@@ -2555,7 +2555,7 @@ dependencies = [
 
 [[package]]
 name = "reestr-app"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "reestr-core",
  "reestr-storage",
@@ -2564,15 +2564,13 @@ dependencies = [
  "tauri",
  "tauri-build",
  "tauri-plugin-dialog",
- "tauri-plugin-reestr-files",
- "tempfile",
  "time",
  "zeroize",
 ]
 
 [[package]]
 name = "reestr-core"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "calamine",
  "rust_xlsxwriter",
@@ -2584,7 +2582,7 @@ dependencies = [
 
 [[package]]
 name = "reestr-storage"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "calamine",
  "reestr-core",
@@ -3472,16 +3470,6 @@ dependencies = [
  "thiserror 2.0.21",
  "toml 1.1.8+spec-1.1.0",
  "url",
-]
-
-[[package]]
-name = "tauri-plugin-reestr-files"
-version = "0.2.1"
-dependencies = [
- "serde",
- "tauri",
- "tauri-plugin",
- "thiserror 2.0.21",
 ]
 
 [[package]]

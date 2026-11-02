@@ -36,29 +36,6 @@
   margin-left: 0;
 }
 
-/* Rows from the phone to take (D39): news, not a warning. */
-.notice.phone {
-  align-items: center;
-  background: var(--accent-wash);
-}
-
-.notice.phone p {
-  flex: 1;
-  margin: 0;
-}
-
-.phoneTitle {
-  color: var(--accent);
-  font-weight: 700;
-}
-
-.phonePassword {
-  width: 180px;
-  padding: var(--s1) var(--s2);
-  border: 1px solid var(--ruling-strong);
-  border-radius: var(--radius);
-}
-
 /* The totals band exists only on month sheets; its row collapses elsewhere. */
 .totals {
   grid-area: totals;

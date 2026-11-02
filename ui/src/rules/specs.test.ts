@@ -9,6 +9,7 @@ const rule: RuleView = {
   id: 7,
   card: "Райф А",
   category: null,
+  mcc: null,
   rateBp: 150,
   spendCap: 3_000_000,
   cashbackCap: null,
@@ -44,6 +45,39 @@ describe("rules table", () => {
     expect(columns[col("remainingSpend")]?.status?.({ ...rule, remainingSpend: 0 })).toBe("danger");
     // Computed columns are read-only.
     expect(columns[col("spent")]?.parse).toBeUndefined();
+  });
+
+  it("does not call a rule by MCC «на всё»", () => {
+    const byCode = { ...rule, mcc: "0742" };
+    expect(columns[col("category")]?.show(byCode)).toBe("");
+    expect(columns[col("mcc")]?.show(byCode)).toBe("0742");
+    expect(columns[col("mcc")]?.show(rule)).toBe("");
+  });
+
+  it("reads an MCC and refuses anything else", () => {
+    const { ops, errors } = buildRuleOps(
+      [
+        { col: col("mcc"), row: 0, text: "0742" },
+        { col: col("mcc"), row: 0, text: "" },
+        { col: col("card"), row: 1, text: "газ" },
+        { col: col("mcc"), row: 1, text: "5411" },
+        { col: col("mcc"), row: 0, text: "74" },
+      ],
+      [rule],
+      columns,
+    );
+    expect(ops).toEqual([
+      { op: "edit", id: 7, edit: { field: "mcc", value: "0742" } },
+      { op: "edit", id: 7, edit: { field: "mcc", value: null } },
+      {
+        op: "append",
+        edits: [
+          { field: "card", value: "Газпром КР" },
+          { field: "mcc", value: "5411" },
+        ],
+      },
+    ]);
+    expect(errors).toEqual(["MCC — это 4 цифры, а не «74»"]);
   });
 
   it("reads «на всё» and completes names", () => {

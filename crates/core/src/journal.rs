@@ -5,6 +5,7 @@ use time::Date;
 
 use crate::cashback::{Cashback, CashbackSource, RateBp, Rounding};
 use crate::dict::{CategoryId, ParticipantId, ProductId};
+use crate::mcc::{InvalidMcc, Mcc};
 use crate::money::Kopecks;
 use crate::month::Month;
 use crate::products::GraceId;
@@ -12,8 +13,8 @@ use crate::products::GraceId;
 pub type EntryId = i64;
 
 /// A spending entry. Columns of the source sheet, in order:
-/// `№ | Наименование | Назначение | Регулярная | Участник | Дата | Сумма | % | Кэшбэк | Карта`.
-/// `№` is the row position and is not stored here.
+/// `№ | Наименование | Назначение | Регулярная | Участник | Дата | Сумма | % | Кэшбэк | Карта`,
+/// then the program's own `MCC`. `№` is the row position and is not stored here.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Entry {
@@ -38,6 +39,8 @@ pub struct Entry {
     pub product_id: Option<ProductId>,
     /// A credit card purchase moved to a tranche by hand; `None` binds it by its date (D28).
     pub grace_period_id: Option<GraceId>,
+    /// «MCC»: chooses the rule before the category does (D20).
+    pub mcc: Option<Mcc>,
 }
 
 /// A change of one field, with dictionary references already resolved to ids.
@@ -57,6 +60,7 @@ pub enum EntryEdit {
     /// Binds a credit card purchase to a tranche by hand; `None` returns it to the binding by
     /// date.
     Tranche(Option<GraceId>),
+    Mcc(Option<Mcc>),
 }
 
 /// A change of one field as the UI sends it: dictionary values are names, which storage
@@ -73,6 +77,8 @@ pub enum EditInput {
     Rate(Option<RateBp>),
     Cashback(Option<Kopecks>),
     Card(Option<String>),
+    /// As typed; checked by [`crate::mcc::parse_mcc`].
+    Mcc(Option<String>),
 }
 
 /// One operation of a batch. A paste or a fill produces many at once.
@@ -95,6 +101,8 @@ pub enum EditError {
     RateTooHigh(u32),
     #[error("entry {0} not found")]
     NotFound(EntryId),
+    #[error(transparent)]
+    InvalidMcc(#[from] InvalidMcc),
 }
 
 impl Entry {
@@ -111,6 +119,7 @@ impl Entry {
             cashback: None,
             product_id: None,
             grace_period_id: None,
+            mcc: None,
         }
     }
 
@@ -146,6 +155,7 @@ impl Entry {
                 self.product_id = id;
             }
             EntryEdit::Tranche(id) => self.grace_period_id = id,
+            EntryEdit::Mcc(mcc) => self.mcc = mcc,
         }
         Ok(())
     }
@@ -165,25 +175,28 @@ impl Entry {
         self.cashback.and_then(|c| c.display_rate_bp(self.amount))
     }
 
-    /// Fills the empty «Назначение», «Участник», «Карта» and «Регулярная» from the last entry
-    /// with the same title (PLAN §8: autocomplete of «Наименование»). Returns whether anything
+    /// Fills the empty «Назначение», «Участник», «Карта», «MCC» and «Регулярная» from the last
+    /// entry with the same title (PLAN §8: autocomplete of «Наименование»). Returns whether anything
     /// changed.
     pub fn autofill_from(&mut self, last_same: &Entry) -> bool {
         let before = (
             self.category_id,
             self.participant_id,
             self.product_id,
+            self.mcc,
             self.is_regular,
         );
         self.category_id = self.category_id.or(last_same.category_id);
         self.participant_id = self.participant_id.or(last_same.participant_id);
         self.product_id = self.product_id.or(last_same.product_id);
+        self.mcc = self.mcc.or(last_same.mcc);
         self.is_regular = self.is_regular || last_same.is_regular;
         before
             != (
                 self.category_id,
                 self.participant_id,
                 self.product_id,
+                self.mcc,
                 self.is_regular,
             )
     }
@@ -260,6 +273,7 @@ mod tests {
         last.category_id = Some(10);
         last.participant_id = Some(20);
         last.product_id = Some(30);
+        last.mcc = Some("0742".parse().unwrap());
         last.is_regular = true;
 
         let mut fresh = Entry::new(2, july());
@@ -269,16 +283,19 @@ mod tests {
                 fresh.category_id,
                 fresh.participant_id,
                 fresh.product_id,
+                fresh.mcc.map(String::from).as_deref(),
                 fresh.is_regular
             ),
-            (Some(10), Some(20), Some(30), true)
+            (Some(10), Some(20), Some(30), Some("0742"), true)
         );
 
         let mut partly = Entry::new(3, july());
         partly.participant_id = Some(21);
+        partly.mcc = Some("5411".parse().unwrap());
         partly.autofill_from(&last);
         assert_eq!(partly.participant_id, Some(21));
         assert_eq!(partly.category_id, Some(10));
+        assert_eq!(partly.mcc, Some("5411".parse().unwrap()));
 
         let mut full = fresh.clone();
         assert!(!full.autofill_from(&last));
@@ -292,6 +309,8 @@ mod tests {
         let edit: EditInput =
             serde_json::from_str(r#"{"field":"card","value":"Газпром КР"}"#).unwrap();
         assert_eq!(edit, EditInput::Card(Some("Газпром КР".into())));
+        let edit: EditInput = serde_json::from_str(r#"{"field":"mcc","value":"0742"}"#).unwrap();
+        assert_eq!(edit, EditInput::Mcc(Some("0742".into())));
         let op: JournalOp = serde_json::from_str(
             r#"{"op":"edit","id":3,"edit":{"field":"isRegular","value":true}}"#,
         )

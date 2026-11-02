@@ -22,6 +22,14 @@ describe("view settings", () => {
     expect(view.hidden).toEqual(["limits"]);
   });
 
+  it("reads the kopecks setting strictly", () => {
+    expect(DEFAULT_VIEW.alwaysKopecks).toBe(false);
+    expect(normalizeView({}).alwaysKopecks).toBe(false);
+    expect(normalizeView({ alwaysKopecks: true }).alwaysKopecks).toBe(true);
+    expect(normalizeView({ alwaysKopecks: "yes" }).alwaysKopecks).toBe(false);
+    expect(normalizeView({ alwaysKopecks: 1 }).alwaysKopecks).toBe(false);
+  });
+
   it("moves and hides blocks", () => {
     const up = moveBlock(DEFAULT_VIEW, "income", -1);
     expect(up.order.indexOf("income")).toBe(DEFAULT_VIEW.order.indexOf("income") - 1);

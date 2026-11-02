@@ -20,6 +20,7 @@ import { categoryEditor } from "./CategoryEditor";
 import { CARD_CELL, CATEGORY_CELL, COLUMNS, TITLE_CELL, cellContent } from "./columns";
 import { useDraftRow } from "./drafts";
 import { type CellChange, pasteChanges } from "./edits";
+import { drawMarkerHeader } from "./markerHeader";
 import { titleEditor } from "./TitleEditor";
 
 interface Props {
@@ -140,6 +141,7 @@ export const JournalGrid = forwardRef<DataEditorRef, Props>(function JournalGrid
       onRowAppended={draft.add}
       trailingRowOptions={{ hint: "Новая строка", sticky: true, tint: true }}
       rowMarkers={{ kind: "clickable-number", width: 48 }}
+      drawHeader={drawMarkerHeader}
       onColumnResize={onColumnResize}
       keybindings={{ search: true, downFill: true }}
       cellActivationBehavior="double-click"

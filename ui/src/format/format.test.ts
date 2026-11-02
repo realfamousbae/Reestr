@@ -1,11 +1,25 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import { formatDate, parseDate } from "./date";
-import { formatMoney, moneyEditText, parseMoney } from "./money";
+import { formatMoney, moneyEditText, parseMoney, setAlwaysKopecks } from "./money";
 import { formatPercent, parsePercent, percentEditText } from "./percent";
-import { complete, isKnown, matchOption, nameKey, parseYesNo, plural } from "./text";
+import { complete, isKnown, matchOption, nameKey, parseMcc, parseYesNo, plural } from "./text";
 
 const NBSP = "\u00a0";
+
+describe("parseMcc", () => {
+  it("keeps four digits as text and clears on empty", () => {
+    expect(parseMcc("0742")).toEqual({ ok: true, value: "0742" });
+    expect(parseMcc(" 5411 ")).toEqual({ ok: true, value: "5411" });
+    expect(parseMcc("  ")).toEqual({ ok: true, value: null });
+  });
+
+  it("refuses anything else", () => {
+    for (const text of ["742", "07420", "54a1", "54 11", "٠٧٤٢"]) {
+      expect(parseMcc(text)).toEqual({ ok: false, message: `MCC — это 4 цифры, а не «${text}»` });
+    }
+  });
+});
 
 describe("money", () => {
   it("formats kopecks with thousands groups and optional kopecks", () => {
@@ -41,6 +55,41 @@ describe("money", () => {
     for (const k of [0, 1, 99, 100, 123456, -77]) {
       expect(parseMoney(formatMoney(k))).toEqual({ ok: true, value: k });
     }
+  });
+
+  describe("always show kopecks", () => {
+    afterEach(() => {
+      setAlwaysKopecks(false);
+    });
+
+    it("is off by default", () => {
+      expect(formatMoney(120000)).toBe(`1${NBSP}200`);
+    });
+
+    it("adds ,00 to whole rubles and keeps real kopecks", () => {
+      setAlwaysKopecks(true);
+      expect(formatMoney(120000)).toBe(`1${NBSP}200,00`);
+      expect(formatMoney(123450)).toBe(`1${NBSP}234,50`);
+      expect(formatMoney(0)).toBe("0,00");
+      expect(formatMoney(5)).toBe("0,05");
+      expect(formatMoney(-5000)).toBe("−50,00");
+      expect(formatMoney(-5010)).toBe("−50,10");
+    });
+
+    it("does not change the editor text and the clipboard", () => {
+      setAlwaysKopecks(true);
+      expect(moneyEditText(120000)).toBe("1200");
+      expect(moneyEditText(0)).toBe("0");
+      expect(moneyEditText(-5000)).toBe("−50");
+      expect(moneyEditText(123450)).toBe("1234,50");
+    });
+
+    it("round-trips through parseMoney", () => {
+      setAlwaysKopecks(true);
+      for (const k of [0, 1, 99, 100, 120000, 123456, -77, -5000]) {
+        expect(parseMoney(formatMoney(k))).toEqual({ ok: true, value: k });
+      }
+    });
   });
 });
 

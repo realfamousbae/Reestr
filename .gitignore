@@ -6,8 +6,13 @@ node_modules/
 ui/dist/
 *.tsbuildinfo
 
-# Tauri generated schemas; the Android project in gen/android is kept (D38)
+# Tauri generated schemas
 crates/app/gen/schemas/
+
+# Signing keys must never be committed
+*.jks
+*.keystore
+keystore.properties
 
 # Data files must never be committed
 *.reestr

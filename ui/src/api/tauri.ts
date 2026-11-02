@@ -27,6 +27,8 @@ export const tauriBackend: Backend = {
   setCardSuggestions: (enabled) => invoke("settings_card_suggestions", { enabled }),
   inflowsApply: (month, ops) => invoke("inflows_apply", { month, ops }),
   planSet: (month, amount) => invoke("plan_set", { month, amount }),
+  calculatorCompare: (amount, cashbackRate, savingsRate, days) =>
+    invoke("calculator_compare", { amount, cashbackRate, savingsRate, days }),
   summaryYears: () => invoke("summary_years"),
   summaryYear: (year, grouped) => invoke("summary_year", { year, grouped }),
   productsView: (today) => invoke("products_view", { today }),
@@ -37,28 +39,6 @@ export const tauriBackend: Backend = {
   importApply: (cards) => invoke("import_apply", { cards }),
   importCancel: () => invoke("import_cancel"),
   exportFile: (path, format, today) => invoke("export_file", { path, format, today }),
-  exchangeFolder: (folder) => invoke("exchange_folder", { folder }),
-  exchangeCheck: () => invoke("exchange_check"),
-  exchangeTake: (password) => invoke("exchange_take", { password }),
-
-  appPlatform: () => invoke("app_platform"),
-  phoneSetup: () => invoke("phone_setup"),
-  phoneChoose: (which, path) => invoke("phone_choose", { which, path }),
-  phoneOpen: (password, other) => invoke("phone_open", { password, otherPassword: other }),
-  phoneSend: () => invoke("phone_send"),
-  phoneMonth: (month) => invoke("phone_month", { month }),
-  phoneSuggest: (month, category, amount) => invoke("phone_suggest", { month, category, amount }),
-  phoneLast: (title) => invoke("phone_last", { title }),
-
-  async pickAnyFile(title) {
-    const path = await open({ title, multiple: false, directory: false });
-    return typeof path === "string" ? path : null;
-  },
-
-  async pickFolder(title) {
-    const path = await open({ title, multiple: false, directory: true });
-    return typeof path === "string" ? path : null;
-  },
 
   async pickExportFile(format, defaultName) {
     const path = await save({

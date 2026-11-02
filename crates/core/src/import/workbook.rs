@@ -4,6 +4,7 @@
 //! numbers 1–7 and the totals (`H2 = SUM(G…)`, `I2…U2 = SUMIF(C…; Служебный!Bn; G…)`,
 //! `V2 = SUMIF(D…; Служебный!C2; G…)`), data rows start at row 3 in columns A–J:
 //! `№ | Наименование | Назначение | Регулярная | Участник | Дата | Сумма | % | Кэшбэк | Карта`.
+//! Our export adds «MCC» in column K; the source sheets have no such column.
 //! A label «Итого:» near row 7 sits next to the cashback total. Formula results are read as
 //! Excel cached them, so they can be compared with our own totals.
 
@@ -15,6 +16,7 @@ use time::Date;
 
 use crate::cashback::RateBp;
 use crate::dict::name_key;
+use crate::mcc::{Mcc, parse_mcc};
 use crate::money::Kopecks;
 use crate::month::Month;
 
@@ -41,6 +43,8 @@ pub struct ImportRow {
     /// Column I when H is empty: a cashback typed as an amount.
     pub cashback: Option<Kopecks>,
     pub card: Option<String>,
+    /// Column K of our export.
+    pub mcc: Option<Mcc>,
 }
 
 /// A totals column of row 2 and what Excel computed for it.
@@ -286,6 +290,12 @@ fn parse_dotted(s: &str) -> Option<Date> {
     Date::from_calendar_date(y, time::Month::try_from(m).ok()?, d).ok()
 }
 
+/// Column K. It has no header of its own and older sheets keep other things there («Итого:» up
+/// to 06.25), so whatever is not a code counts as empty, without a warning.
+fn mcc(cell: Option<&Data>) -> Option<Mcc> {
+    parse_mcc(text(cell).as_deref()).ok().flatten()
+}
+
 fn read_rows(sheet: &str, range: &Range<Data>, warnings: &mut Vec<Warning>) -> Vec<ImportRow> {
     let Some((last_row, _)) = range.end() else {
         return Vec::new();
@@ -357,6 +367,7 @@ fn read_rows(sheet: &str, range: &Range<Data>, warnings: &mut Vec<Warning>) -> V
             rate,
             cashback,
             card: text(cell(9)),
+            mcc: mcc(cell(10)),
         });
     }
     rows
@@ -501,6 +512,26 @@ mod tests {
         assert_eq!(rate(Some(&Data::String("6%".into()))), Some(RateBp(600)));
         assert_eq!(rate(Some(&Data::Float(0.0))), None);
         assert_eq!(text(Some(&Data::Float(3170.0))).as_deref(), Some("3170"));
+    }
+
+    #[test]
+    fn mcc_from_cells() {
+        let code = |c: &str| Some(c.parse::<Mcc>().unwrap());
+        assert_eq!(mcc(Some(&Data::String("0742".into()))), code("0742"));
+        assert_eq!(mcc(Some(&Data::String(" 5411 ".into()))), code("5411"));
+        assert_eq!(mcc(Some(&Data::Float(5411.0))), code("5411"));
+        assert_eq!(mcc(Some(&Data::Int(5411))), code("5411"));
+        for junk in [
+            Data::Empty,
+            Data::String("Итого:".into()),
+            Data::String("54".into()),
+            Data::Float(742.0),
+            Data::Float(5411.5),
+            Data::Bool(true),
+        ] {
+            assert_eq!(mcc(Some(&junk)), None, "{junk:?}");
+        }
+        assert_eq!(mcc(None), None);
     }
 
     #[test]

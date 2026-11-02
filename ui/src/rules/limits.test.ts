@@ -9,6 +9,7 @@ const base: RuleView = {
   id: 1,
   card: "Газпром КР",
   category: "еда",
+  mcc: null,
   rateBp: 1000,
   spendCap: null,
   cashbackCap: 30_000,
@@ -35,6 +36,7 @@ describe("limits in words", () => {
   it("names the rule", () => {
     expect(ruleTitle(base)).toBe("Газпром КР · еда 10%");
     expect(ruleTitle({ ...base, category: null, rateBp: 150 })).toBe("Газпром КР · на всё 1,5%");
+    expect(ruleTitle({ ...base, category: null, mcc: "0742" })).toBe("Газпром КР · MCC 0742 10%");
   });
 
   it("says what is left", () => {

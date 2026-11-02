@@ -248,6 +248,7 @@ impl Vault {
                         EntryEdit::Product(
                             resolver.resolve(DictKind::Product, row.card.as_deref())?,
                         ),
+                        EntryEdit::Mcc(row.mcc),
                     ];
                     if let Some(rate) = row.rate {
                         edits.push(EntryEdit::Rate(Some(rate)));

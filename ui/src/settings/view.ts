@@ -23,6 +23,8 @@ export interface ViewSettings {
   /** Every block, in the order shown. */
   order: BlockId[];
   hidden: BlockId[];
+  /** Show «1 200,00» instead of «1 200» (formatMoney). */
+  alwaysKopecks: boolean;
 }
 
 const KEY = "reestr.view";
@@ -31,6 +33,7 @@ export const DEFAULT_VIEW: ViewSettings = {
   fontSize: DEFAULT_FONT_SIZE,
   order: BLOCKS.map((b) => b.id),
   hidden: [],
+  alwaysKopecks: false,
 };
 
 function isBlock(value: unknown): value is BlockId {
@@ -49,7 +52,7 @@ export function normalizeView(raw: unknown): ViewSettings {
   const order = [...new Set(listed)];
   for (const b of BLOCKS) if (!order.includes(b.id)) order.push(b.id);
   const hidden = Array.isArray(r.hidden) ? [...new Set(r.hidden.filter(isBlock))] : [];
-  return { fontSize, order, hidden };
+  return { fontSize, order, hidden, alwaysKopecks: r.alwaysKopecks === true };
 }
 
 export function readView(): ViewSettings {

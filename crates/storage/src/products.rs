@@ -5,13 +5,14 @@ use std::collections::HashMap;
 
 use reestr_core::date::{format_iso, parse_iso};
 use reestr_core::products::{
-    credit_debt, deadlines, new_tranche_dates, repayment_tranche, tranche_of_entry, tranche_states,
+    available_check, credit_debt, deadlines, new_tranche_dates, repayment_tranche,
+    tranche_of_entry, tranche_states,
 };
 use reestr_core::{
-    CreditInput, CreditTerms, CustomDeadline, Deadline, DeadlineInput, DictKind, Entry, EntryEdit,
-    GraceId, GracePeriod, Kopecks, ProductError, ProductId, ProductKind, ProductOp, RateBp,
-    Repayment, RepaymentInput, SavingsInput, SavingsState, SavingsTerms, TrancheInput,
-    TrancheState,
+    AvailableCheck, CreditInput, CreditTerms, CustomDeadline, Deadline, DeadlineInput, DictKind,
+    Entry, EntryEdit, GraceId, GracePeriod, Kopecks, ProductError, ProductId, ProductKind,
+    ProductOp, RateBp, Repayment, RepaymentInput, SavingsInput, SavingsState, SavingsTerms,
+    TrancheInput, TrancheState,
 };
 use rusqlite::types::Value;
 use rusqlite::{Connection, OptionalExtension, Row as SqlRow};
@@ -101,13 +102,17 @@ fn repayments(conn: &Connection) -> Result<Vec<Repayment>, StorageError> {
 fn credit_terms(conn: &Connection) -> Result<HashMap<ProductId, CreditTerms>, StorageError> {
     let rows = all(
         conn,
-        "SELECT product_id, credit_limit, default_grace_days FROM credit_terms",
+        "SELECT product_id, credit_limit, default_grace_days, manual_available,
+                manual_available_on
+         FROM credit_terms",
         |r| {
             Ok((
                 r.get::<_, i64>(0)?,
                 CreditTerms {
                     credit_limit: r.get::<_, Option<i64>>(1)?.map(Kopecks),
                     default_grace_days: r.get(2)?,
+                    manual_available: r.get::<_, Option<i64>>(3)?.map(Kopecks),
+                    manual_available_on: opt_date(r.get(4)?),
                 },
             ))
         },
@@ -208,6 +213,8 @@ pub struct CreditCard {
     /// Purchases in unpaid tranches, and recent ones outside any tranche.
     pub purchases: Vec<Purchase>,
     pub debt: Kopecks,
+    /// The entered balance against the computed one; `None` when there is nothing to compare.
+    pub available: Option<AvailableCheck>,
     /// Purchases without a tranche: before the first one, or without a date.
     pub unbound: usize,
     /// Where a new repayment goes by default (D27).
@@ -448,11 +455,22 @@ fn apply_op(
         ProductOp::CreditTerms { product, edit } => {
             edit.validate()?;
             let id = terms_row(rec, Table::CreditTerms, product)?;
-            let (column, value) = match edit {
-                CreditInput::CreditLimit(v) => ("credit_limit", opt_int(v.map(Kopecks::get))),
-                CreditInput::GraceDays(v) => ("default_grace_days", opt_int(v.map(i64::from))),
-            };
-            rec.update(Table::CreditTerms, id, column, value)?;
+            match edit {
+                CreditInput::CreditLimit(v) => {
+                    let value = opt_int(v.map(Kopecks::get));
+                    rec.update(Table::CreditTerms, id, "credit_limit", value)?;
+                }
+                CreditInput::GraceDays(v) => {
+                    let value = opt_int(v.map(i64::from));
+                    rec.update(Table::CreditTerms, id, "default_grace_days", value)?;
+                }
+                CreditInput::ManualAvailable { amount, on } => {
+                    let value = opt_int(amount.map(Kopecks::get));
+                    rec.update(Table::CreditTerms, id, "manual_available", value)?;
+                    let date = on.map_or(Value::Null, |d| Value::Text(format_iso(d)));
+                    rec.update(Table::CreditTerms, id, "manual_available_on", date)?;
+                }
+            }
         }
         ProductOp::SavingsTerms { product, edit } => {
             edit.validate()?;
@@ -590,9 +608,17 @@ impl Vault {
                         });
                     }
                 }
+                let card_terms = terms.remove(&card).unwrap_or_default();
                 CreditCard {
                     product_id: card,
-                    terms: terms.remove(&card).unwrap_or_default(),
+                    available: available_check(
+                        card,
+                        &card_terms,
+                        &all_tranches,
+                        &entries,
+                        &all_repayments,
+                    ),
+                    terms: card_terms,
                     repayments: all_repayments
                         .iter()
                         .filter(|r| card_tranches.iter().any(|t| t.id == r.grace_period_id))

@@ -4,16 +4,17 @@ use std::collections::{BTreeSet, HashMap};
 
 use reestr_core::date::format_iso;
 use reestr_core::{
+    AvailableCheck, DeadlineSource, GraceId, Inflow, InflowId, MonthBalance, ProductId,
+    RepaymentId, SavingsState, TrancheStatus, Urgency,
+};
+use reestr_core::{Better, CalcResult};
+use reestr_core::{
     CardSuggestion, CashbackRule, CashbackSource, Entry, EntryId, Kopecks, Month, MonthTotals,
     RuleId, RuleUsage, month_totals,
 };
-use reestr_core::{
-    DeadlineSource, GraceId, Inflow, InflowId, MonthBalance, ProductId, RepaymentId, SavingsState,
-    TrancheStatus, Urgency,
-};
 use reestr_storage::{
     COPIES_KEPT, CipherSetting, Created, Dictionaries, FileInfo, ImportReport, ProductsData,
-    StorageError, TakeReport, Vault, copies_dir,
+    StorageError, Vault, copies_dir,
 };
 use serde::Serialize;
 
@@ -156,6 +157,7 @@ pub struct EntryView {
     pub cashback: Option<Kopecks>,
     pub cashback_source: Option<CashbackSource>,
     pub card: Option<String>,
+    pub mcc: Option<String>,
 }
 
 /// Id → name lookups for building views.
@@ -163,13 +165,6 @@ struct Names {
     categories: HashMap<i64, String>,
     participants: HashMap<i64, String>,
     products: HashMap<i64, String>,
-}
-
-impl EntryView {
-    /// One entry with the names of its references.
-    pub fn of(d: &Dictionaries, e: &Entry) -> Self {
-        Names::new(d).view(e)
-    }
 }
 
 impl Names {
@@ -208,6 +203,7 @@ impl Names {
             cashback: e.cashback.map(|c| c.amount),
             cashback_source: e.cashback.map(|c| c.source),
             card: name(&self.products, e.product_id),
+            mcc: e.mcc.map(String::from),
         }
     }
 }
@@ -219,8 +215,9 @@ impl Names {
 pub struct RuleView {
     pub id: RuleId,
     pub card: String,
-    /// `None` is «на всё».
+    /// With `mcc` also `None`, the rule is «на всё».
     pub category: Option<String>,
+    pub mcc: Option<String>,
     pub rate_bp: u32,
     pub spend_cap: Option<Kopecks>,
     pub cashback_cap: Option<Kopecks>,
@@ -246,6 +243,7 @@ impl RuleView {
             category: rule
                 .category_id
                 .and_then(|c| names.categories.get(&c).cloned()),
+            mcc: rule.mcc.map(String::from),
             rate_bp: rule.rate.0,
             spend_cap: rule.spend_cap,
             cashback_cap: rule.cashback_cap,
@@ -434,47 +432,6 @@ pub struct ImportResult {
     pub history: HistoryState,
 }
 
-/// The phone's file in the exchange folder (D39).
-#[derive(Debug, Serialize)]
-#[serde(tag = "state", rename_all = "camelCase")]
-pub enum PhoneCheck {
-    /// No exchange folder is chosen on this computer.
-    Off,
-    /// The phone has not written its file yet.
-    NoFile,
-    /// Everything in the phone's file is taken.
-    UpToDate,
-    Changes {
-        report: TakeReport,
-    },
-    /// The phone's file does not open with the key of this file: the password was changed
-    /// since, or the file is not fully synced yet.
-    NeedsPassword,
-    /// The file could not be read; `code` is an error code.
-    Problem {
-        code: &'static str,
-    },
-}
-
-/// The exchange with the phone as the workbook shows it.
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ExchangeView {
-    /// The copy for the phone could not be written to the folder.
-    pub copy_failed: bool,
-    pub phone: PhoneCheck,
-}
-
-/// The result of «Забрать с телефона».
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TakeResult {
-    pub report: TakeReport,
-    pub history: HistoryState,
-    /// The new copy for the phone could not be written.
-    pub copy_failed: bool,
-}
-
 /// A tranche of a credit card with what it owes.
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -526,7 +483,11 @@ pub struct CreditCardView {
     pub participant: Option<String>,
     pub credit_limit: Option<Kopecks>,
     pub grace_days: Option<u32>,
+    pub manual_available: Option<Kopecks>,
+    pub manual_available_on: Option<String>,
     pub debt: Kopecks,
+    /// The entered balance against the computed one, when there is something to compare.
+    pub available: Option<AvailableCheck>,
     pub unbound: usize,
     pub repayment_tranche: Option<GraceId>,
     pub tranches: Vec<TrancheView>,
@@ -605,7 +566,10 @@ impl ProductsView {
                     participant: participant(c.product_id),
                     credit_limit: c.terms.credit_limit,
                     grace_days: c.terms.default_grace_days,
+                    manual_available: c.terms.manual_available,
+                    manual_available_on: c.terms.manual_available_on.map(format_iso),
                     debt: c.debt,
+                    available: c.available,
                     unbound: c.unbound,
                     repayment_tranche: c.repayment_tranche,
                     tranches: c
@@ -700,4 +664,29 @@ pub struct ProductsResult {
     pub view: ProductsView,
     pub created: Vec<Created>,
     pub history: HistoryState,
+}
+
+/// The answer of «Калькулятор»: money in kopecks, the break-even rate in basis points.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CalcView {
+    pub cashback: Kopecks,
+    pub interest: Kopecks,
+    /// Cashback minus interest: positive when the card wins.
+    pub difference: Kopecks,
+    /// `None` when undefined (zero days or a zero amount); may exceed 10 000.
+    pub break_even_bp: Option<i64>,
+    pub better: Better,
+}
+
+impl From<CalcResult> for CalcView {
+    fn from(r: CalcResult) -> Self {
+        Self {
+            cashback: r.cashback,
+            interest: r.interest,
+            difference: r.difference,
+            break_even_bp: r.break_even_bp,
+            better: r.better,
+        }
+    }
 }

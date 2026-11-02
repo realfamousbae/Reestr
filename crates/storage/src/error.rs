@@ -49,29 +49,9 @@ pub enum StorageError {
     Product(#[from] reestr_core::ProductError),
     #[error("export failed: {0}")]
     Export(#[from] reestr_core::export::ExportError),
-    /// The phone's working file was given where the main file is expected (D39).
-    #[error("this is the phone's file, not the main one")]
-    PhoneFile,
-    /// A copy of the main file written for the phone was given where the main file is
-    /// expected (D39).
-    #[error("this is a copy for the phone, not the main file")]
-    SnapshotFile,
-    #[error("this is not a file from the phone")]
-    NotFromPhone,
-    #[error("this is not a copy of the main file for the phone")]
-    NotForPhone,
-    /// The phone's file or copy belongs to another main file.
-    #[error("the file belongs to another main file")]
-    OtherFile,
-    /// The copy for the phone is older than the one the phone works with.
-    #[error("the copy for the phone is older than the phone's file")]
-    OlderCopy,
-    /// Rules, dictionaries, products and the rest are edited on the computer only (D40).
-    #[error("only the computer can do this")]
-    ComputerOnly,
-    /// The phone edits only its own rows the computer has not taken yet (D40).
-    #[error("the row belongs to the computer")]
-    NotPhoneRow,
+    /// A file made by the phone exchange of an old version: edits there would be lost (D41).
+    #[error("this is a copy from the phone exchange of an old version, not the main file")]
+    PhoneCopy,
 }
 
 impl From<rusqlite::Error> for StorageError {

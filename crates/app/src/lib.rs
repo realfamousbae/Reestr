@@ -4,22 +4,12 @@
 mod commands;
 mod dto;
 mod error;
-mod phone;
 mod state;
 
-use tauri::{Manager, WindowEvent};
-
-#[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_reestr_files::init())
         .manage(state::AppState::default())
-        .on_window_event(|window, event| {
-            if let WindowEvent::CloseRequested { .. } = event {
-                commands::on_exit(&window.state::<state::AppState>());
-            }
-        })
         .invoke_handler(tauri::generate_handler![
             commands::vault_create,
             commands::vault_open,
@@ -52,17 +42,7 @@ pub fn run() {
             commands::import_apply,
             commands::import_cancel,
             commands::export_file,
-            commands::exchange_folder,
-            commands::exchange_check,
-            commands::exchange_take,
-            phone::app_platform,
-            phone::phone_setup,
-            phone::phone_choose,
-            phone::phone_open,
-            phone::phone_send,
-            phone::phone_month,
-            phone::phone_suggest,
-            phone::phone_last,
+            commands::calculator_compare,
         ])
         .run(tauri::generate_context!())
         .expect("failed to start Reestr");
@@ -70,9 +50,9 @@ pub fn run() {
 
 #[cfg(test)]
 mod tests {
-    /// Android takes the version from tauri.conf.json, Windows from Cargo.toml: one number.
+    /// The version lives in tauri.conf.json and in Cargo.toml: one number.
     #[test]
-    fn the_version_is_the_same_on_every_platform() {
+    fn the_version_is_the_same_in_both_files() {
         let config: serde_json::Value =
             serde_json::from_str(include_str!("../tauri.conf.json")).unwrap();
         assert_eq!(config["version"], env!("CARGO_PKG_VERSION"));

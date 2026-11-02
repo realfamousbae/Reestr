@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Реестр — семейный бюджет, кэшбэк и кредитки в одной таблице</title>
+    <meta
+      name="description"
+      content="Реестр — бесплатная программа для Windows: журнал семейных трат как в Excel, кэшбэк по правилам карт, грейс-периоды кредиток и годовой «Свод». Данные в одном зашифрованном файле, без интернета."
+    />
+    <link rel="canonical" href="https://reestr.up.railway.app/" />
+    <meta name="theme-color" content="#f7f9f7" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#141b29" media="(prefers-color-scheme: dark)" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Реестр — семейный бюджет как в Excel, только считает сам" />
+    <meta
+      property="og:description"
+      content="Журнал трат, кэшбэк по правилам карт, грейсы кредиток и «Свод» за год. Один файл под паролем, без интернета."
+    />
+    <meta property="og:url" content="https://reestr.up.railway.app/" />
+    <meta property="og:image" content="https://reestr.up.railway.app/assets/og.png" />
+    <meta property="og:locale" content="ru_RU" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" type="image/svg+xml" href="/assets/icon.svg" />
+    <link rel="icon" type="image/png" href="/assets/favicon-64.png" />
+    <link rel="apple-touch-icon" href="/assets/icon-128.png" />
+    <link
+      rel="preload"
+      href="/assets/fonts/pt-serif-cyrillic-700-normal.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="/assets/fonts/pt-sans-cyrillic-400-normal.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="/main.js" defer></script>
+  </head>
+  <body>
+    <a class="skip" href="#main">К содержимому</a>
+
+    <header class="top">
+      <div class="top-in">
+        <a class="brand" href="/" aria-label="Реестр, на главную">
+          <img src="/assets/icon.svg" alt="" width="28" height="28" />
+          <span>Реестр</span>
+        </a>
+        <nav class="top-nav" aria-label="Разделы">
+          <a href="#features">Возможности</a>
+          <a href="#privacy">Приватность</a>
+          <a href="https://reestr-docs.up.railway.app/">Руководство</a>
+          <a href="https://github.com/realfamousbae/Reestr">GitHub</a>
+        </nav>
+        <a class="button small" href="#download">Скачать</a>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="hero">
+        <div class="wrap">
+          <h1>
+            Семейный бюджет в той&nbsp;же таблице, что&nbsp;была в&nbsp;Excel. Только кэшбэк, лимиты
+            и&nbsp;сроки теперь считаются сами.
+          </h1>
+          <p class="lede">
+            Реестр — программа для Windows, которая заменяет самодельную книгу учёта затрат.
+            Те&nbsp;же колонки и&nbsp;вкладки месяцев, а&nbsp;ещё правила кэшбэка по&nbsp;картам,
+            грейсы кредиток и&nbsp;годовой «Свод».
+          </p>
+          <div class="ctas">
+            <a
+              class="button"
+              href="https://github.com/realfamousbae/Reestr/releases/download/v0.2.1/Reestr_0.2.1_x64-setup.exe"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M11 3h2v10.17l3.59-3.58L18 11l-6 6-6-6 1.41-1.41L11 13.17zM5 19h14v2H5z" />
+              </svg>
+              Скачать для Windows
+            </a>
+          </div>
+          <p class="note">
+            Версия 0.2.1 для Windows 10 и 11. Бесплатно,
+            <a href="https://github.com/realfamousbae/Reestr">открытый код</a>, без регистрации.
+          </p>
+        </div>
+
+        <div class="wrap wide">
+          <figure class="demo" aria-labelledby="demo-caption">
+            <figcaption id="demo-caption" class="demo-caption">
+              Попробуйте прямо здесь: впишите покупку в&nbsp;нижнюю строку и&nbsp;нажмите Enter.
+              Реестр подскажет, какой картой платить, и&nbsp;сам посчитает кэшбэк.
+            </figcaption>
+            <div class="sheet" data-demo hidden>
+              <div class="sheet-bar">
+                <span class="sheet-title"><b>Реестр</b> Семья.reestr</span>
+              </div>
+              <div class="sheet-totals" aria-label="Итоги по назначениям">
+                <div class="total main"><span>Итого, ₽</span><b data-total="all"></b></div>
+                <div class="total"><span>Продукты</span><b data-total="продукты"></b></div>
+                <div class="total"><span>Еда</span><b data-total="еда"></b></div>
+                <div class="total"><span>Транспорт</span><b data-total="транспорт"></b></div>
+                <div class="total"><span>Одежда</span><b data-total="одежда"></b></div>
+                <div class="total"><span>Дача</span><b data-total="дача"></b></div>
+              </div>
+              <div class="sheet-body">
+                <div class="grid-scroll">
+                  <table class="grid">
+                    <thead>
+                      <tr>
+                        <th class="n" scope="col">№</th>
+                        <th scope="col">Наименование</th>
+                        <th scope="col">Назначение</th>
+                        <th class="opt" scope="col">Участник</th>
+                        <th class="opt" scope="col">Дата</th>
+                        <th class="num" scope="col">Сумма</th>
+                        <th class="num" scope="col">%</th>
+                        <th class="num" scope="col">Кэшбэк</th>
+                        <th scope="col">Карта</th>
+                      </tr>
+                    </thead>
+                    <tbody data-rows></tbody>
+                    <tfoot>
+                      <tr class="entry">
+                        <td class="n">+</td>
+                        <td>
+                          <input
+                            data-field="name"
+                            list="names"
+                            autocomplete="off"
+                            placeholder="Например, Пятёрочка"
+                            aria-label="Наименование"
+                          />
+                        </td>
+                        <td>
+                          <select data-field="purpose" aria-label="Назначение">
+                            <option value="продукты">продукты</option>
+                            <option value="еда">еда</option>
+                            <option value="транспорт">транспорт</option>
+                            <option value="одежда">одежда</option>
+                            <option value="дача">дача</option>
+                          </select>
+                        </td>
+                        <td class="opt muted">Марина</td>
+                        <td class="opt muted" data-today></td>
+                        <td class="num">
+                          <input
+                            data-field="amount"
+                            inputmode="decimal"
+                            placeholder="0,00"
+                            aria-label="Сумма, рублей"
+                          />
+                        </td>
+                        <td class="num muted" data-preview="rate"></td>
+                        <td class="num muted" data-preview="cashback"></td>
+                        <td class="muted" data-preview="card"></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                  <datalist id="names">
+                    <option value="Пятёрочка"></option>
+                    <option value="Лента"></option>
+                    <option value="Такси"></option>
+                    <option value="Кафе"></option>
+                    <option value="Семена"></option>
+                    <option value="Куртка"></option>
+                    <option value="Метро"></option>
+                  </datalist>
+                </div>
+                <aside class="limits" aria-label="Лимиты по картам">
+                  <h3>Лимиты по картам</h3>
+                  <ul data-limits></ul>
+                </aside>
+              </div>
+              <p class="advice" data-advice role="status" aria-live="polite"></p>
+              <div class="sheet-tabs" aria-hidden="true">
+                <span>09.26</span><span>10.26</span><span class="on">11.26</span
+                ><span class="sep"></span><span>Свод</span><span>Продукты</span><span>Сроки</span>
+              </div>
+            </div>
+            <img
+              class="demo-fallback"
+              src="/assets/screens/month-sheet.webp"
+              width="1600"
+              height="939"
+              alt="Лист месяца в Реестре: итоги по назначениям, журнал трат с кэшбэком и блоки справа"
+              data-fallback
+            />
+          </figure>
+        </div>
+      </section>
+
+      <section class="block" id="features" aria-labelledby="features-title">
+        <div class="wrap">
+          <h2 id="features-title">Всё, что вы считали формулами, считается само</h2>
+          <p class="intro">
+            Реестр сделан по&nbsp;настоящей семейной книге учёта, которую годами вели в&nbsp;Excel.
+            Лист месяца остался тем&nbsp;же, а&nbsp;хрупкие формулы, ручные сверки
+            и&nbsp;напоминания в&nbsp;голове программа взяла на&nbsp;себя.
+          </p>
+        </div>
+
+        <article class="feature wrap">
+          <div class="feature-text">
+            <h3>Лист месяца, как в&nbsp;Excel</h3>
+            <p>
+              Те&nbsp;же колонки в&nbsp;том&nbsp;же порядке, итоги по&nbsp;назначениям сверху,
+              вкладки месяцев внизу. Enter, Tab и&nbsp;стрелки, <kbd>Ctrl+Z</kbd>, вставка диапазона
+              из&nbsp;Excel. Наименование подсказывается из&nbsp;прошлых строк и&nbsp;само
+              подставляет назначение и&nbsp;карту.
+            </p>
+            <a href="https://reestr-docs.up.railway.app/guide/month-sheet/">Как вносить траты</a>
+          </div>
+          <img
+            class="shot"
+            src="/assets/screens/sheet-tabs.webp"
+            width="1290"
+            height="459"
+            loading="lazy"
+            alt="Журнал месяца в Реестре: строки трат, строка «Новая строка» и вкладки месяцев внизу"
+          />
+        </article>
+
+        <article class="feature wrap flip">
+          <div class="feature-text">
+            <h3>Кэшбэк по&nbsp;правилам банков</h3>
+            <p>
+              Банки меняют категории каждый месяц — запишите их правилами: карта, категория,
+              процент, лимиты трат и&nbsp;кэшбэка. Реестр посчитает кэшбэк с&nbsp;округлением как
+              у&nbsp;банка, покажет, сколько лимита осталось, и&nbsp;при вводе подскажет, какой
+              картой выгоднее платить.
+            </p>
+            <a href="https://reestr-docs.up.railway.app/guide/cashback-rules/"
+              >Как задать правила</a
+            >
+          </div>
+          <img
+            class="shot"
+            src="/assets/screens/rules.webp"
+            width="1060"
+            height="310"
+            loading="lazy"
+            alt="Таблица «Правила кэшбэка на 12.26»: карта, категория, процент, лимиты, потрачено и кэшбэк"
+          />
+        </article>
+
+        <article class="feature wrap">
+          <div class="feature-text">
+            <h3>Кредитки и&nbsp;сроки под&nbsp;присмотром</h3>
+            <p>
+              Покупки сами попадают в&nbsp;нужный грейс-период по&nbsp;дате, погашения — в&nbsp;тот,
+              что кончается раньше. Видно, сколько ещё внести и&nbsp;до&nbsp;какого числа. Лист
+              «Сроки» собирает все ближайшие даты: грейсы, вклады, ваши напоминания. Близкий срок —
+              оранжевым, просроченный — красным.
+            </p>
+            <a href="https://reestr-docs.up.railway.app/guide/products-deadlines/"
+              >Кредитки, вклады и сроки</a
+            >
+          </div>
+          <img
+            class="shot"
+            src="/assets/screens/credit.webp"
+            width="1074"
+            height="315"
+            loading="lazy"
+            alt="Кредитная карта в Реестре: грейс-периоды со сроками, долгом, погашениями и остатком"
+          />
+        </article>
+
+        <article class="feature wrap flip">
+          <div class="feature-text">
+            <h3>«Свод» за&nbsp;год без единой формулы</h3>
+            <p>
+              Год по&nbsp;месяцам: траты, план дохода, кэшбэк, баланс и&nbsp;прирост к&nbsp;прошлому
+              году. Ничего вводить не&nbsp;нужно — всё собирается из&nbsp;журнала
+              и&nbsp;поступлений.
+            </p>
+            <a href="https://reestr-docs.up.railway.app/guide/income-summary/"
+              >Приход, план и «Свод»</a
+            >
+          </div>
+          <img
+            class="shot"
+            src="/assets/screens/summary.webp"
+            width="940"
+            height="635"
+            loading="lazy"
+            alt="Лист «Свод» за 2026 год: сумма, план дохода и баланс по месяцам"
+          />
+        </article>
+
+        <article class="feature wrap">
+          <div class="feature-text">
+            <h3>Старая книга переедет целиком</h3>
+            <p>
+              Откройте свою книгу «Учёт затрат» — Реестр заберёт месяцы, назначения, участников
+              и&nbsp;карты и&nbsp;сверит итоги с&nbsp;формулами листа. Надпись «итоги совпадают
+              до&nbsp;копейки» значит, что ничего не&nbsp;потерялось.
+            </p>
+            <a href="https://reestr-docs.up.railway.app/start/import-excel/">Перенос из Excel</a>
+          </div>
+          <div class="import" aria-hidden="true">
+            <p class="import-file">Учёт затрат.xlsx</p>
+            <table>
+              <tr>
+                <th>Лист</th>
+                <th class="num">Строк</th>
+                <th>Итоги</th>
+              </tr>
+              <tr>
+                <td>08.26</td>
+                <td class="num">96</td>
+                <td class="ok">совпадают до копейки</td>
+              </tr>
+              <tr>
+                <td>09.26</td>
+                <td class="num">104</td>
+                <td class="ok">совпадают до копейки</td>
+              </tr>
+              <tr>
+                <td>10.26</td>
+                <td class="num">118</td>
+                <td class="ok">совпадают до копейки</td>
+              </tr>
+              <tr>
+                <td>11.26</td>
+                <td class="num">87</td>
+                <td class="ok">совпадают до копейки</td>
+              </tr>
+            </table>
+            <span class="import-button">Импортировать 405 строк</span>
+          </div>
+        </article>
+      </section>
+
+      <section class="block privacy" id="privacy" aria-labelledby="privacy-title">
+        <div class="wrap">
+          <h2 id="privacy-title">Ваши траты знаете только вы</h2>
+          <p class="intro">
+            Реестр не&nbsp;ходит в&nbsp;интернет. Нет аккаунта, облака, рекламы и&nbsp;аналитики —
+            только файл на&nbsp;вашем компьютере.
+          </p>
+          <dl class="facts">
+            <div>
+              <dt>Один файл под паролем</dt>
+              <dd>
+                Всё лежит в&nbsp;файле <code>.reestr</code>, и&nbsp;он зашифрован целиком. Его можно
+                копировать на&nbsp;флешку или в&nbsp;облако — без пароля это просто шум.
+              </dd>
+            </div>
+            <div>
+              <dt>Пароль не&nbsp;восстановить</dt>
+              <dd>
+                Мы честно предупреждаем: его не&nbsp;знает никто, кроме вас, поэтому сбросить его
+                нельзя. Запишите пароль туда, где храните важные документы.
+              </dd>
+            </div>
+            <div>
+              <dt>Копии и&nbsp;откат</dt>
+              <dd>
+                Программа сама делает резервные копии файла, а&nbsp;любую правку можно отменить
+                через <kbd>Ctrl+Z</kbd>.
+              </dd>
+            </div>
+            <div>
+              <dt>Открытый код</dt>
+              <dd>
+                Исходники лежат на&nbsp;<a href="https://github.com/realfamousbae/Reestr">GitHub</a>
+                под лицензией MIT: каждый может проверить, что программа делает с&nbsp;данными.
+              </dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+
+      <section class="block install" id="download" aria-labelledby="download-title">
+        <div class="wrap">
+          <h2 id="download-title">Установка за&nbsp;пару минут</h2>
+          <ol class="steps">
+            <li>
+              <h3>Скачайте установщик</h3>
+              <p>
+                <a
+                  href="https://github.com/realfamousbae/Reestr/releases/download/v0.2.1/Reestr_0.2.1_x64-setup.exe"
+                  >Reestr_0.2.1_x64-setup.exe</a
+                >
+                для Windows 10 и&nbsp;11. Если он не&nbsp;запускается, есть
+                <a
+                  href="https://github.com/realfamousbae/Reestr/releases/download/v0.2.1/Reestr_0.2.1_x64_ru-RU.msi"
+                  >установщик .msi</a
+                >.
+              </p>
+            </li>
+            <li>
+              <h3>Разрешите запуск</h3>
+              <p>
+                У&nbsp;программы нет платной цифровой подписи, поэтому Windows покажет синее окно.
+                Нажмите «Подробнее», затем «Выполнить в&nbsp;любом случае». Права администратора
+                не&nbsp;нужны.
+              </p>
+            </li>
+            <li>
+              <h3>Создайте файл или перенесите книгу</h3>
+              <p>
+                Придумайте пароль для нового файла — или сразу заберите свою книгу из&nbsp;Excel.
+                <a href="https://reestr-docs.up.railway.app/start/first-file/"
+                  >Первый файл и пароль</a
+                >
+              </p>
+            </li>
+          </ol>
+          <div class="ctas">
+            <a
+              class="button"
+              href="https://github.com/realfamousbae/Reestr/releases/download/v0.2.1/Reestr_0.2.1_x64-setup.exe"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M11 3h2v10.17l3.59-3.58L18 11l-6 6-6-6 1.41-1.41L11 13.17zM5 19h14v2H5z" />
+              </svg>
+              Скачать для Windows
+            </a>
+            <a class="button ghost" href="https://reestr-docs.up.railway.app/"
+              >Открыть руководство</a
+            >
+          </div>
+          <p class="note">
+            Все версии и списки изменений — на&nbsp;странице
+            <a href="https://github.com/realfamousbae/Reestr/releases">выпусков</a>
+            и&nbsp;в&nbsp;разделе
+            <a href="https://reestr-docs.up.railway.app/help/changelog/">«Что нового»</a>.
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <div class="wrap foot-in">
+        <span class="foot-brand"
+          ><img src="/assets/icon.svg" alt="" width="20" height="20" /> Реестр</span
+        >
+        <nav aria-label="Ссылки">
+          <a href="https://reestr-docs.up.railway.app/">Руководство</a>
+          <a href="https://reestr-docs.up.railway.app/help/faq/">Вопросы и ответы</a>
+          <a href="https://github.com/realfamousbae/Reestr">GitHub</a>
+          <a href="https://github.com/realfamousbae/Reestr/blob/master/LICENSE">Лицензия MIT</a>
+        </nav>
+      </div>
+    </footer>
+  </body>
+</html>
