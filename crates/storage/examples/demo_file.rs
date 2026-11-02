@@ -387,7 +387,7 @@ fn products(vault: &mut Vault) -> Result {
             ProductOp::CreditTerms {
                 product: gazprom,
                 edit: CreditInput::ManualAvailable {
-                    amount: Some(rub(92_000)),
+                    amount: Some(rub(128_500)),
                     on: Some(date("2026-12-18")),
                 },
             },
