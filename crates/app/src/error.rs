@@ -1,5 +1,5 @@
 use reestr_core::import::ImportError;
-use reestr_core::{EditError, ProductError, RuleError};
+use reestr_core::{CalcError, EditError, ProductError, RuleError};
 use reestr_storage::StorageError;
 use serde::Serialize;
 
@@ -103,6 +103,18 @@ impl From<ImportError> for CommandError {
             ImportError::Read(_) => "workbook_unreadable",
             ImportError::NoServiceSheet => "workbook_no_service",
             ImportError::NoMonths => "workbook_no_months",
+        };
+        Self::new(code, error.to_string())
+    }
+}
+
+impl From<CalcError> for CommandError {
+    fn from(error: CalcError) -> Self {
+        let code = match error {
+            CalcError::NegativeAmount => "calc_negative_amount",
+            CalcError::AmountTooLarge => "calc_amount_too_large",
+            CalcError::RateTooHigh(_) => "calc_rate_too_high",
+            CalcError::TooManyDays(_) => "calc_too_many_days",
         };
         Self::new(code, error.to_string())
     }

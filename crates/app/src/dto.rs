@@ -7,6 +7,7 @@ use reestr_core::{
     AvailableCheck, DeadlineSource, GraceId, Inflow, InflowId, MonthBalance, ProductId,
     RepaymentId, SavingsState, TrancheStatus, Urgency,
 };
+use reestr_core::{Better, CalcResult};
 use reestr_core::{
     CardSuggestion, CashbackRule, CashbackSource, Entry, EntryId, Kopecks, Month, MonthTotals,
     RuleId, RuleUsage, month_totals,
@@ -663,4 +664,29 @@ pub struct ProductsResult {
     pub view: ProductsView,
     pub created: Vec<Created>,
     pub history: HistoryState,
+}
+
+/// The answer of «Калькулятор»: money in kopecks, the break-even rate in basis points.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CalcView {
+    pub cashback: Kopecks,
+    pub interest: Kopecks,
+    /// Cashback minus interest: positive when the card wins.
+    pub difference: Kopecks,
+    /// `None` when undefined (zero days or a zero amount); may exceed 10 000.
+    pub break_even_bp: Option<i64>,
+    pub better: Better,
+}
+
+impl From<CalcResult> for CalcView {
+    fn from(r: CalcResult) -> Self {
+        Self {
+            cashback: r.cashback,
+            interest: r.interest,
+            difference: r.difference,
+            break_even_bp: r.break_even_bp,
+            better: r.better,
+        }
+    }
 }

@@ -641,6 +641,20 @@ export interface CommandError {
   detail: string | null;
 }
 
+/** Which option of «Калькулятор» brings more money. */
+export type CalcBetter = "cashback" | "savings" | "equal";
+
+/** The answer of «Калькулятор»; every number comes from the core. */
+export interface CalcView {
+  cashback: Kopecks;
+  interest: Kopecks;
+  /** Cashback minus interest: positive when the card wins. */
+  difference: Kopecks;
+  /** The yearly savings rate (basis points) at which interest equals cashback; null if undefined. */
+  breakEvenBp: number | null;
+  better: CalcBetter;
+}
+
 export interface Backend {
   vaultCreate(path: string, password: string): Promise<FileInfo>;
   /** Opens a file; the first opening of the day copies it (D32). `today` is "YYYY-MM-DD". */
@@ -666,6 +680,13 @@ export interface Backend {
   inflowsApply(month: Month, ops: InflowOp[]): Promise<ChangeResult>;
   /** The income plan from `month` on; null returns to the plan of an earlier month. */
   planSet(month: Month, amount: Kopecks | null): Promise<ChangeResult>;
+  /** Cashback against savings interest for a term. Stateless: reads and writes no file. */
+  calculatorCompare(
+    amount: Kopecks,
+    cashbackRate: number,
+    savingsRate: number,
+    days: number,
+  ): Promise<CalcView>;
   summaryYears(): Promise<number[]>;
   summaryYear(year: number, grouped: boolean): Promise<YearSummary>;
   /** `today` is the user's date, "YYYY-MM-DD". */

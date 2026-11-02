@@ -27,6 +27,8 @@ export const tauriBackend: Backend = {
   setCardSuggestions: (enabled) => invoke("settings_card_suggestions", { enabled }),
   inflowsApply: (month, ops) => invoke("inflows_apply", { month, ops }),
   planSet: (month, amount) => invoke("plan_set", { month, amount }),
+  calculatorCompare: (amount, cashbackRate, savingsRate, days) =>
+    invoke("calculator_compare", { amount, cashbackRate, savingsRate, days }),
   summaryYears: () => invoke("summary_years"),
   summaryYear: (year, grouped) => invoke("summary_year", { year, grouped }),
   productsView: (today) => invoke("products_view", { today }),

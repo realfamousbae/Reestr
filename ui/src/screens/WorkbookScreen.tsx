@@ -48,6 +48,7 @@ import { daysText, deadlineText } from "../products/labels";
 import { ProductsSheet } from "../products/ProductsSheet";
 import { RulesSheet } from "../rules/RulesSheet";
 import { setAlwaysKopecks } from "../format/money";
+import { CalculatorPage } from "../calculator/CalculatorPage";
 import { SettingsPage } from "../settings/SettingsPage";
 import { type ViewSettings, readView, shownBlocks, writeView } from "../settings/view";
 import { SummarySheet } from "../summary/SummarySheet";
@@ -122,13 +123,14 @@ export function WorkbookScreen({ backend, file, onClose }: Props) {
   const [grouped, setGrouped] = useState(() => readFlag(GROUPED_KEY));
   const [importing, setImporting] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [calcOpen, setCalcOpen] = useState(false);
   /** The view of this computer (D34). */
   const [prefs, setPrefs] = useState<ViewSettings>(readView);
   // The sheets are unmounted while the settings are open (`overlay`), so they redraw with the
   // new mode when they come back. Setting a module flag during render is idempotent.
   setAlwaysKopecks(prefs.alwaysKopecks);
-  /** The import or the settings cover the sheets. */
-  const overlay = importing || settingsOpen;
+  /** The import, the calculator or the settings cover the sheets. */
+  const overlay = importing || settingsOpen || calcOpen;
   /** A month sheet shows its journal, its cashback rules or its inflows. */
   const [pane, setPane] = useState<"journal" | "rules" | "inflows">("journal");
   /** Bumped when undo or redo changes the data under the open «Свод». */
@@ -579,6 +581,16 @@ export function WorkbookScreen({ backend, file, onClose }: Props) {
           type="button"
           className={styles.close}
           onClick={() => {
+            setCalcOpen(true);
+          }}
+          disabled={overlay}
+        >
+          Калькулятор
+        </button>
+        <button
+          type="button"
+          className={styles.close}
+          onClick={() => {
             setSettingsOpen(true);
           }}
           disabled={overlay}
@@ -649,6 +661,14 @@ export function WorkbookScreen({ backend, file, onClose }: Props) {
             }}
             onClose={() => {
               setSettingsOpen(false);
+            }}
+          />
+        )}
+        {calcOpen && (
+          <CalculatorPage
+            backend={backend}
+            onClose={() => {
+              setCalcOpen(false);
             }}
           />
         )}

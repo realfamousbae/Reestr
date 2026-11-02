@@ -5,8 +5,8 @@ use std::path::Path;
 use reestr_core::date::parse_iso;
 use reestr_core::import::{CardSetup, read_workbook};
 use reestr_core::{
-    DictKind, DictOp, EntryId, InflowOp, JournalOp, Kopecks, Month, ProductOp, RuleOp, TemplateId,
-    YearSummary,
+    CalcInput, DictKind, DictOp, EntryId, InflowOp, JournalOp, Kopecks, Month, ProductOp, RateBp,
+    RuleOp, TemplateId, YearSummary,
 };
 use reestr_storage::{CopyOutcome, Dictionaries, ImportPreview, StorageError, Vault};
 use tauri::State;
@@ -14,8 +14,8 @@ use time::Date;
 use zeroize::Zeroizing;
 
 use crate::dto::{
-    AboutView, ChangeResult, DictResult, FileInfoDto, HistoryState, ImportResult, MonthTab,
-    MonthView, ProductsResult, ProductsView, ReplayResult, SuggestionView,
+    AboutView, CalcView, ChangeResult, DictResult, FileInfoDto, HistoryState, ImportResult,
+    MonthTab, MonthView, ProductsResult, ProductsView, ReplayResult, SuggestionView,
 };
 use crate::error::CommandError;
 use crate::state::{AppState, lock, with_vault};
@@ -450,4 +450,22 @@ pub fn import_apply(
 pub fn import_cancel(state: State<'_, AppState>) -> CommandResult<()> {
     *lock(&state.import)? = None;
     Ok(())
+}
+
+/// «Калькулятор»: cashback against savings interest for a term. Stateless: it reads no file and
+/// writes nothing, so it works with a file open and needs no vault.
+#[tauri::command]
+pub fn calculator_compare(
+    amount: Kopecks,
+    cashback_rate: RateBp,
+    savings_rate: RateBp,
+    days: u32,
+) -> CommandResult<CalcView> {
+    let result = reestr_core::compare(CalcInput {
+        amount,
+        cashback_rate,
+        savings_rate,
+        days,
+    })?;
+    Ok(result.into())
 }

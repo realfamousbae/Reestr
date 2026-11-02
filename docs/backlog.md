@@ -29,4 +29,3 @@ model goes here, not into code). Newest first.
 ## Later
 
 - `PRAGMA cipher_memory_security` — wipe SQLCipher memory allocations (performance cost).
-- Calculator «кэшбэк vs проценты по накопительному» (PLAN §3).

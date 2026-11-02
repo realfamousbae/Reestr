@@ -5,6 +5,7 @@
 //! - money is integer kopecks ([`money::Kopecks`]), never floats;
 //! - every calculation is a pure function with tests.
 
+pub mod calculator;
 pub mod cashback;
 pub mod date;
 pub mod dict;
@@ -19,6 +20,7 @@ pub mod rules;
 pub mod summary;
 pub mod totals;
 
+pub use calculator::{Better, CalcError, CalcInput, CalcResult, compare};
 pub use cashback::{Cashback, CashbackSource, RateBp, Rounding};
 pub use dict::{
     Bank, BankId, Category, CategoryGroup, CategoryId, DictInput, DictKind, DictOp, GroupId,

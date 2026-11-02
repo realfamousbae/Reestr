@@ -1,0 +1,129 @@
+.page {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100%;
+  background: var(--sheet);
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s2) var(--s4);
+  border-bottom: 1px solid var(--ruling);
+}
+
+.bar h2 {
+  margin: 0;
+  font-size: var(--text-m);
+}
+
+.lead {
+  color: var(--ink-muted);
+  font-size: var(--text-s);
+}
+
+.button {
+  margin-left: auto;
+  min-width: 36px;
+  padding: var(--s1) var(--s2);
+  border: 1px solid var(--ruling-strong);
+  border-radius: var(--radius);
+  background: var(--sheet);
+  cursor: pointer;
+}
+
+.button:hover {
+  background: var(--band);
+}
+
+.body {
+  overflow-y: auto;
+  padding: var(--s4);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  max-width: 420px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+}
+
+.field label {
+  color: var(--ink-muted);
+  font-size: var(--text-s);
+}
+
+.field input {
+  padding: var(--s2) var(--s3);
+  border: 1px solid var(--ruling-strong);
+  border-radius: var(--radius);
+  background: var(--sheet);
+  font-variant-numeric: tabular-nums;
+}
+
+.field input:focus {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.field input[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+
+.hint {
+  margin: 0;
+  color: var(--ink-faint);
+  font-size: var(--text-s);
+}
+
+.error {
+  margin: 0;
+  color: var(--danger);
+  font-size: var(--text-s);
+}
+
+.result {
+  max-width: 520px;
+  margin-top: var(--s4);
+  padding-top: var(--s3);
+  border-top: 1px solid var(--ruling);
+}
+
+.result h3 {
+  margin: 0 0 var(--s3);
+  font-size: var(--text-l);
+}
+
+.verdict {
+  margin: 0 0 var(--s3);
+  font-weight: 700;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--s1) var(--s4);
+  margin: 0 0 var(--s3);
+}
+
+.facts dt {
+  color: var(--ink-muted);
+}
+
+.facts dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.note {
+  max-width: 68ch;
+  margin: var(--s4) 0 0;
+  color: var(--ink-muted);
+}

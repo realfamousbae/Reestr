@@ -42,6 +42,7 @@ pub fn run() {
             commands::import_apply,
             commands::import_cancel,
             commands::export_file,
+            commands::calculator_compare,
         ])
         .run(tauri::generate_context!())
         .expect("failed to start Reestr");
