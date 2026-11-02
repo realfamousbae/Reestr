@@ -31,7 +31,7 @@ export interface ColumnSpec {
 }
 
 export const COLUMNS: readonly ColumnSpec[] = [
-  { key: "title", title: "Наименование", width: 280, align: "left" },
+  { key: "title", title: "Наименование", width: 196, align: "left" },
   { key: "category", title: "Назначение", width: 132, align: "left" },
   { key: "isRegular", title: "Регулярная", width: 96, align: "center" },
   { key: "participant", title: "Участник", width: 104, align: "left" },
