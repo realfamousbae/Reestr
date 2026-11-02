@@ -34,7 +34,7 @@ function fileName(path: string): string {
   return path.split(/[\\/]/).pop() ?? path;
 }
 
-/** The import of the old workbook (PLAN §9): choose, check, adjust cards, import. */
+/** The import of an xlsx workbook (PLAN §9): choose, check, adjust cards, import. */
 export function ImportWizard({ backend, dictionaries, onImported, onClose }: Props) {
   const [step, setStep] = useState<Step>({ kind: "choose" });
   const [error, setError] = useState<string | null>(null);
@@ -93,9 +93,9 @@ export function ImportWizard({ backend, dictionaries, onImported, onClose }: Pro
       {step.kind === "choose" && (
         <section className={styles.section}>
           <p className={styles.lead}>
-            Выберите прежнюю таблицу учёта затрат. Реестр прочитает лист «Служебный» и листы месяцев
-            («07.26»), покажет, что найдено, и сверит итоги с формулами каждого листа. Лист «Свод»
-            не нужен: он пересчитывается. В самой таблице ничего не меняется.
+            Выберите книгу Excel в структуре Реестра. Реестр прочитает лист «Служебный» и листы
+            месяцев («07.26»), покажет, что найдено, и сверит итоги с формулами каждого листа. Лист
+            «Свод» не нужен: он пересчитывается. В самой книге ничего не меняется.
           </p>
           <button type="button" className={styles.primary} onClick={choose}>
             Выбрать файл Excel…

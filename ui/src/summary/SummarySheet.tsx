@@ -34,7 +34,7 @@ function Line({ line, footer }: { line: SummaryLine; footer?: boolean }) {
 }
 
 /**
- * «Свод» (PLAN §8): the months of a year with the source columns, and the year's sums, shares,
+ * «Свод» (PLAN §8): the months of a year with its columns, and the year's sums, shares,
  * averages and growth against the year before underneath. Nothing here is typed in: it is
  * computed from the journal, the income plan and the inflows.
  */

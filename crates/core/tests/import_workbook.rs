@@ -1,4 +1,4 @@
-//! Stage 1 acceptance (PLAN §12): a workbook in the source structure imports, and the
+//! Stage 1 acceptance (PLAN §12): a workbook in the xlsx layout (PLAN §9) imports, and the
 //! totals of every month equal what its formulas computed, to the kopeck.
 //!
 //! `fixtures/workbook.xlsx` is a synthetic workbook with fictional entries, written by
@@ -74,7 +74,7 @@ fn dictionaries_of_the_workbook() {
     );
 }
 
-/// The source workbook has no MCC column; sheets before 07.25 keep «Итого:» in column K.
+/// The fixture has no MCC codes; sheets before 07.25 keep «Итого:» in column K.
 #[test]
 fn old_sheets_have_no_mcc_and_keep_their_totals() {
     let book = read_workbook(&fixture("workbook.xlsx")).unwrap();
@@ -107,9 +107,13 @@ fn rows_are_read_like_the_sheet_shows_them() {
     assert_eq!(rent.date, reestr_core::date::parse_iso("2026-07-01"));
     assert_eq!(rent.card.as_deref(), Some("Д ВТБ"));
 
-    let certificate = july.rows.iter().find(|r| r.title == "Сертификат").unwrap();
-    assert_eq!(certificate.rate, None);
-    assert_eq!(certificate.cashback, Some(Kopecks::from_rubles(200)));
+    let gift_card = july
+        .rows
+        .iter()
+        .find(|r| r.title == "Подарочная карта")
+        .unwrap();
+    assert_eq!(gift_card.rate, None);
+    assert_eq!(gift_card.cashback, Some(Kopecks::from_rubles(250)));
 
     let refund = july
         .rows

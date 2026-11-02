@@ -64,7 +64,7 @@ export function Block({ id, title, actions, children }: BlockProps) {
   );
 }
 
-/** «Итого кэшбэк / Ср. %» — the cells L7:M8 of the source sheet (D22). */
+/** «Итого кэшбэк / Ср. %» — the cells L7:M8 of an exported month sheet (D22). */
 export function CashbackBlock({ totals }: { totals: MonthTotals }) {
   return (
     <Block id="cashback" title="Кэшбэк">

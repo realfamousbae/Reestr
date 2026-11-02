@@ -1,4 +1,4 @@
-//! Import of the source workbook (PLAN §9): categories from «Служебный», entries from the
+//! Import of an xlsx workbook (PLAN §9): categories from «Служебный», entries from the
 //! month sheets `MM.YY`, groups from merged totals columns. «Свод» is not imported: it is
 //! recomputed.
 

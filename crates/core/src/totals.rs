@@ -1,5 +1,5 @@
-//! Month totals: the row of sums above the journal (PLAN §8), like the header of the
-//! source sheet: «Итого», one column per category (or per group), «Регулярные».
+//! Month totals: the row of sums above the journal (PLAN §8): «Итого», one column per category
+//! (or per group), «Регулярные».
 
 use std::collections::{HashMap, HashSet};
 
@@ -30,7 +30,7 @@ pub struct MonthTotals {
     /// One column per category, in dictionary order.
     pub by_category: Vec<TotalColumn>,
     /// Groups instead of their categories; a group stands where its first category stands,
-    /// ungrouped categories stay as themselves. This repeats the workbook header:
+    /// ungrouped categories stay as themselves. The default groups are the merged columns:
     /// «Лечение» = лечение + лекарства, «Красота/косметика», «Одежда/обувь».
     pub by_group: Vec<TotalColumn>,
     /// Entries without a category.
@@ -168,7 +168,7 @@ mod tests {
         }
     }
 
-    /// The workbook header: Еда, Продукты, Лечение(+лекарства), Транспорт, Красота/косметика.
+    /// A month header: Еда, Продукты, Лечение(+лекарства), Транспорт, Красота/косметика.
     fn dictionary() -> (Vec<Category>, Vec<CategoryGroup>) {
         let categories = vec![
             category(1, "еда", None, 1),
@@ -268,7 +268,7 @@ mod tests {
 
     #[test]
     fn rate_base_leaves_out_rent_only() {
-        // The workbook: «Ср. %» = M7 / (H2 − G3), row 3 being rent (D16, D37). The internet in
+        // In xlsx terms «Ср. %» = M7 / (H2 − G3), row 3 being rent (D16, D37). The internet in
         // the same category stays in the base.
         let (mut categories, groups) = dictionary();
         categories.push(category(8, "квартиры", None, 8));

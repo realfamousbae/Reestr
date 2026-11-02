@@ -17,8 +17,8 @@ export interface Batch {
 
 /**
  * Builds one batch from changed cells. Rows at or beyond `entries.length` become new rows at
- * the bottom, in order. When a row gets both «%» and «Кэшбэк», the percentage wins: in the
- * workbook the cashback column is a formula of it.
+ * the bottom, in order. When a row gets both «%» and «Кэшбэк», the percentage wins: the
+ * cashback is computed from it.
  */
 export function buildBatch(
   changes: readonly CellChange[],

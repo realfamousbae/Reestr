@@ -111,7 +111,7 @@ mod tests {
         );
         assert_eq!(guess("Д ВТБ"), (Some("ВТБ"), Some(Debit), None));
         assert_eq!(guess("КР Сбер"), (Some("Сбербанк"), Some(Credit), None));
-        assert_eq!(guess("ПСБ 3170"), (Some("ПСБ"), None, None));
+        assert_eq!(guess("ПСБ 7741"), (Some("ПСБ"), None, None));
         assert_eq!(guess("Росб 4512"), (Some("Росбанк"), None, None));
         assert_eq!(
             guess("Почта А"),

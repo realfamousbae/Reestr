@@ -7,7 +7,7 @@ export const DEFAULT_FONT_SIZE = 15;
 export type BlockId =
   "cashback" | "regular" | "limits" | "credit" | "savings" | "income" | "deadlines";
 
-/** The blocks of a month sheet in the order of the source workbook (PLAN §8), then «Сроки». */
+/** The blocks of a month sheet in their default order (PLAN §8), «Сроки» last. */
 export const BLOCKS: readonly { id: BlockId; title: string }[] = [
   { id: "cashback", title: "Кэшбэк" },
   { id: "regular", title: "Регулярные платежи" },

@@ -1,8 +1,9 @@
 # CLAUDE.md — rules for working on Reestr
 
-Reestr is a desktop family-budget app (Tauri 2 + Rust core + React UI) that replaces a household
-Excel workbook (its layout is reproduced by `tools/fixtures/make_workbook.py`). `PLAN.md` is the
-source of truth; this file condenses the rules from its §8, §10, §15 and §16.
+Reestr is a desktop family-budget app (Tauri 2 + Rust core + React UI): a monthly spending
+journal laid out like a spreadsheet, with cards and cashback. `tools/fixtures/make_workbook.py`
+builds test workbooks in its xlsx layout. `PLAN.md` is the source of truth; this file condenses
+the rules from its §8, §10, §15 and §16.
 
 - Test data, fixtures, examples and screenshots are fictional only (participants Андрей and
   Марина, made-up cards). Never commit real names, card digits, amounts or files of real people.
@@ -48,9 +49,9 @@ source of truth; this file condenses the rules from its §8, §10, §15 and §16
 
 ## UI (§8)
 
-- The month screen mirrors the source workbook's sheet: same columns in the same order
+- The month screen is a spreadsheet sheet with fixed columns in this order
   (`№ | Наименование | Назначение | Регулярная | Участник | Дата | Сумма | % | Кэшбэк | Карта |
-MCC`; MCC is ours, the workbook has no such column),
+MCC`),
   category totals above the journal, blocks on the right, month tabs `MM.YY`, a «Свод» sheet.
   Changing column/block order requires an explicit decision by the author.
 - Excel feel: Enter/Tab/arrows, `Ctrl+Z`, paste ranges from clipboard, new row always at the

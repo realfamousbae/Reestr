@@ -1,6 +1,6 @@
-//! The xlsx export (D29, D30): «Служебный», the month sheets and «Свод» laid out like the
-//! source workbook, with values instead of formulas, then a sheet for each kind of data the source
-//! workbook does not have. Our import reads the month sheets back into the same journal.
+//! The xlsx export (D29, D30): «Служебный», the month sheets and «Свод» in the layout the import
+//! reads, with values instead of formulas, then a sheet for each kind of data that has no place
+//! on them. Our import reads the month sheets back into the same journal.
 
 use std::collections::HashMap;
 
@@ -280,7 +280,7 @@ impl Names {
     }
 }
 
-/// «Служебный»: the categories in column B, as the source month formulas refer to them.
+/// «Служебный»: the categories in column B, as month sheet formulas refer to them.
 fn service_sheet(wb: &mut Workbook, book: &Book, s: &Styles) -> Result<(), XlsxError> {
     let ws = wb.add_worksheet();
     ws.set_name(SERVICE_SHEET)?;
@@ -296,9 +296,8 @@ fn service_sheet(wb: &mut Workbook, book: &Book, s: &Styles) -> Result<(), XlsxE
     Ok(())
 }
 
-/// The journal columns of a month sheet, A–G; H–J (%, cashback, card) sit under the totals band
-/// like in the source sheet, and so does K (MCC), which the source sheet does not have. Rows 1–2
-/// of K belong to the band, so K is wide enough for a total.
+/// The journal columns of a month sheet, A–G; H–J (%, cashback, card) and K (MCC) sit under the
+/// totals band. Rows 1–2 of K belong to the band, so K is wide enough for a total.
 const JOURNAL: [(&str, f64); 11] = [
     ("№", 5.0),
     ("Наименование", 32.0),
@@ -313,7 +312,7 @@ const JOURNAL: [(&str, f64); 11] = [
     ("", 12.0),
 ];
 
-/// Where the source sheet keeps «Итого:» and «Ср. %» of the cashback: L7:M8.
+/// Where a month sheet keeps «Итого:» and «Ср. %» of the cashback: L7:M8.
 const BLOCK_ROW: RowNum = 6;
 const BLOCK_COL: ColNum = 11;
 
@@ -327,7 +326,7 @@ fn month_sheet(
     ws.set_name(m.month.sheet_name())?;
     let t = &m.totals;
 
-    // Rows 1–2: the column numbers 1–7, then the totals band by the source merged columns.
+    // Rows 1–2: the column numbers 1–7, then the totals band by merged columns (groups).
     for (i, (title, width)) in JOURNAL.iter().enumerate() {
         ws.set_column_width(col_num(i), *width)?;
         if i < 7 {
@@ -386,7 +385,7 @@ fn month_sheet(
         put_row(ws, row_num(i + 2), 0, &cells, s, false)?;
     }
 
-    // The right blocks: the source cashback cells, then «Приход / расход».
+    // The right blocks: the cashback cells, then «Приход / расход».
     let b = &m.balance;
     let block = [
         ("Итого:", Cell::Money(t.cashback)),
@@ -585,7 +584,7 @@ const fn status_label(status: TrancheStatus) -> &'static str {
     }
 }
 
-/// Sheets for what the source workbook does not have (D30).
+/// Sheets for the data that has no place on the month sheets and «Свод» (D30).
 #[allow(clippy::too_many_lines)]
 fn data_sheets(wb: &mut Workbook, book: &Book, names: &Names, s: &Styles) -> Result<(), XlsxError> {
     table(

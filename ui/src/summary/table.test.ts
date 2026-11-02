@@ -63,7 +63,7 @@ function summary(withPrevious: boolean): YearSummary {
 }
 
 describe("«Свод» table", () => {
-  it("keeps the source columns in their order", () => {
+  it("keeps the «Свод» columns in their order", () => {
     expect(summaryTable(summary(true)).head.map((h) => h.title)).toEqual([
       "Сумма",
       "План дохода",

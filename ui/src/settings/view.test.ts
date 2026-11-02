@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_VIEW, moveBlock, normalizeView, shownBlocks, toggleBlock } from "./view";
 
 describe("view settings", () => {
-  it("falls back to the source order and the default size", () => {
+  it("falls back to the default order and size", () => {
     expect(normalizeView(null)).toEqual(DEFAULT_VIEW);
     expect(normalizeView({ fontSize: 99 }).fontSize).toBe(15);
     expect(DEFAULT_VIEW.order[0]).toBe("cashback");

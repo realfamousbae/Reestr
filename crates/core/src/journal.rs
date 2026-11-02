@@ -12,9 +12,9 @@ use crate::products::GraceId;
 
 pub type EntryId = i64;
 
-/// A spending entry. Columns of the source sheet, in order:
-/// `№ | Наименование | Назначение | Регулярная | Участник | Дата | Сумма | % | Кэшбэк | Карта`,
-/// then the program's own `MCC`. `№` is the row position and is not stored here.
+/// A spending entry. Columns of a month sheet, in order:
+/// `№ | Наименование | Назначение | Регулярная | Участник | Дата | Сумма | % | Кэшбэк | Карта |
+/// MCC`. `№` is the row position and is not stored here.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Entry {
@@ -28,7 +28,7 @@ pub struct Entry {
     pub is_regular: bool,
     /// «Участник».
     pub participant_id: Option<ParticipantId>,
-    /// «Дата». May lie outside `month`: late records are allowed, like in the workbook.
+    /// «Дата». May lie outside `month`: late records are allowed.
     #[serde(with = "crate::date::iso::option")]
     pub date: Option<Date>,
     /// «Сумма».
@@ -219,22 +219,22 @@ mod tests {
     fn rate_follows_amount_but_typed_cashback_does_not() {
         let r = Rounding::FloorRub;
         let mut e = Entry::new(1, july());
-        apply(&mut e, EntryEdit::Amount(Kopecks::from_rubles(2234)), r);
-        apply(&mut e, EntryEdit::Rate(Some(RateBp(600))), r);
-        assert_eq!(e.cashback_amount(), Kopecks::from_rubles(134));
-        assert_eq!(e.display_rate_bp(), Some(600));
+        apply(&mut e, EntryEdit::Amount(Kopecks::from_rubles(3181)), r);
+        apply(&mut e, EntryEdit::Rate(Some(RateBp(500))), r);
+        assert_eq!(e.cashback_amount(), Kopecks::from_rubles(159));
+        assert_eq!(e.display_rate_bp(), Some(500));
 
         apply(&mut e, EntryEdit::Amount(Kopecks::from_rubles(1000)), r);
-        assert_eq!(e.cashback_amount(), Kopecks::from_rubles(60));
+        assert_eq!(e.cashback_amount(), Kopecks::from_rubles(50));
 
         apply(
             &mut e,
-            EntryEdit::Cashback(Some(Kopecks::from_rubles(200))),
+            EntryEdit::Cashback(Some(Kopecks::from_rubles(250))),
             r,
         );
-        apply(&mut e, EntryEdit::Amount(Kopecks::from_rubles(666)), r);
-        assert_eq!(e.cashback_amount(), Kopecks::from_rubles(200));
-        assert_eq!(e.display_rate_bp(), Some(3003));
+        apply(&mut e, EntryEdit::Amount(Kopecks::from_rubles(900)), r);
+        assert_eq!(e.cashback_amount(), Kopecks::from_rubles(250));
+        assert_eq!(e.display_rate_bp(), Some(2778));
         assert_eq!(e.cashback.unwrap().source, CashbackSource::ManualAmount);
 
         apply(&mut e, EntryEdit::Rate(None), r);

@@ -212,7 +212,7 @@ fn xlsx_reads_back_into_the_same_journal() {
 
     let bytes = a.export_xlsx(today).unwrap();
 
-    // The sheets: the three kinds of the source workbook in its order, then the data the source workbook does not have.
+    // The sheets: «Служебный», the months and «Свод», then a sheet for each kind of other data.
     let mut sheets = open_workbook_auto_from_rs(Cursor::new(bytes.clone())).unwrap();
     let mut expected = vec!["Служебный".to_owned()];
     expected.extend(months.iter().map(|m| m.sheet_name()));
@@ -235,7 +235,7 @@ fn xlsx_reads_back_into_the_same_journal() {
     );
     assert_eq!(sheets.sheet_names(), expected);
 
-    // «Свод»: the month totals of the first year with entries, by groups like the source sheet.
+    // «Свод»: the month totals of the first year with entries, by groups.
     let year = a.summary_years().unwrap().into_iter().next().unwrap();
     let ours = a.year_summary(year, true).unwrap();
     let summary = sheets.worksheet_range("Свод").unwrap();

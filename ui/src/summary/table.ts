@@ -1,4 +1,4 @@
-// «Свод» as text cells (PLAN §8): the source columns in their order, months, then the footer. Every
+// «Свод» as text cells (PLAN §8): its columns in their order, months, then the footer. Every
 // figure comes from the core; this only formats it.
 
 import type { FooterLine, Kopecks, SummaryRow, YearSummary } from "../api";

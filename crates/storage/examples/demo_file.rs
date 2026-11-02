@@ -103,7 +103,7 @@ const CARDS: &[(&str, &str, &str, ProductKind)] = &[
     ("Газпром КР", "Газпромбанк", "Андрей", ProductKind::Credit),
     ("Росб 4512", "Росбанк", "Андрей", ProductKind::Debit),
     ("Почта А", "Почта Банк", "Андрей", ProductKind::Credit),
-    ("ПСБ 3170", "ПСБ", "Марина", ProductKind::Debit),
+    ("ПСБ 7741", "ПСБ", "Марина", ProductKind::Debit),
 ];
 
 /// Step 2: the synthetic workbook, with every card set up in the import wizard.
@@ -132,7 +132,7 @@ fn import(vault: &mut Vault) -> Result {
     Ok(())
 }
 
-/// Step 3: two savings products that the workbook does not have.
+/// Step 3: two savings products; the workbook has no sheet for them.
 fn savings(vault: &mut Vault) -> Result {
     let mut ops = Vec::new();
     for (name, bank, who, kind) in [

@@ -26,7 +26,7 @@ impl RateBp {
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Rounding {
-    /// Down to whole rubles — what the source workbook does: `ROUNDDOWN(G*H;0)`.
+    /// Down to whole rubles, like `ROUNDDOWN(G*H;0)` in Excel.
     #[default]
     FloorRub,
     /// Down to kopecks.
@@ -213,10 +213,10 @@ mod tests {
 
     #[test]
     fn floor_rub_matches_excel_rounddown() {
-        // 2 234,00 ₽ × 6% = 134,04 ₽ → 134 ₽ (the "6% → 134 ₽" case of the source workbook).
+        // 3 181,00 ₽ × 5% = 159,05 ₽ → 159 ₽.
         assert_eq!(
-            cashback_for(rub(2234, 0), RateBp(600), Rounding::FloorRub),
-            rub(134, 0)
+            cashback_for(rub(3181, 0), RateBp(500), Rounding::FloorRub),
+            rub(159, 0)
         );
         // 999,99 ₽ × 5% = 49,9995 ₽ → 49 ₽.
         assert_eq!(
@@ -272,10 +272,10 @@ mod tests {
 
     #[test]
     fn refunds_round_toward_zero() {
-        // A refund of 2 234,00 ₽ at 6% takes back 134 ₽, not 135 ₽.
+        // A refund of 3 181,00 ₽ at 5% takes back 159 ₽, not 160 ₽.
         assert_eq!(
-            cashback_for(-rub(2234, 0), RateBp(600), Rounding::FloorRub),
-            -rub(134, 0)
+            cashback_for(-rub(3181, 0), RateBp(500), Rounding::FloorRub),
+            -rub(159, 0)
         );
         assert_eq!(
             cashback_for(-rub(1350, 0), RateBp(100), Rounding::HalfUpRub),
@@ -285,18 +285,18 @@ mod tests {
 
     #[test]
     fn effective_rate() {
-        // Certificate 666 ₽ → 200 ₽ of cashback = 30,03%.
-        assert_eq!(effective_rate_bp(rub(666, 0), rub(200, 0)), Some(3003));
-        assert_eq!(effective_rate_bp(rub(2234, 0), rub(134, 0)), Some(600));
+        // Gift card 900 ₽ → 250 ₽ of cashback = 27,78%.
+        assert_eq!(effective_rate_bp(rub(900, 0), rub(250, 0)), Some(2778));
+        assert_eq!(effective_rate_bp(rub(3181, 0), rub(159, 0)), Some(500));
         assert_eq!(effective_rate_bp(Kopecks::ZERO, rub(1, 0)), None);
         assert_eq!(effective_rate_bp(-rub(100, 0), -rub(5, 0)), Some(500));
     }
 
     #[test]
     fn recompute_keeps_manual_amount() {
-        let typed = Cashback::manual_amount(rub(200, 0));
+        let typed = Cashback::manual_amount(rub(250, 0));
         assert_eq!(typed.recomputed(rub(1000, 0), Rounding::FloorRub), typed);
-        assert_eq!(typed.display_rate_bp(rub(666, 0)), Some(3003));
+        assert_eq!(typed.display_rate_bp(rub(900, 0)), Some(2778));
 
         let by_rate = Cashback::from_percent(rub(1000, 0), RateBp(500), Rounding::FloorRub);
         assert_eq!(by_rate.amount, rub(50, 0));

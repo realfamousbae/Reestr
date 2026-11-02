@@ -3,7 +3,7 @@ import styles from "./SheetTabs.module.css";
 
 /**
  * A sheet of the workbook: a month, «Свод», the products, the deadlines, or the dictionaries
- * (the source «Служебный» sheet).
+ * («Служебный» in the xlsx).
  */
 export type Sheet =
   | { kind: "month"; month: string }
@@ -28,7 +28,7 @@ const SERVICE: { kind: Exclude<Sheet["kind"], "month">; title: string }[] = [
   { kind: "dictionaries", title: "Справочники" },
 ];
 
-/** Sheet tabs at the bottom, like in the workbook. */
+/** Sheet tabs at the bottom, like in a spreadsheet. */
 export function SheetTabs({ tabs, active, urgent, onSelect, onAddMonth }: Props) {
   return (
     <div className={styles.strip}>

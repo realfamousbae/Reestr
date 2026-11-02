@@ -1,5 +1,4 @@
-// The journal columns, in the order of the source sheet (PLAN §8), then «MCC», which the source
-// sheet does not have (D20). «№» is the row marker.
+// The journal columns, in the order of PLAN §8, «MCC» last (D20). «№» is the row marker.
 // Changing the order requires an explicit decision by the author.
 
 import { type GridCell, GridCellKind, type TextCell, type Theme } from "@glideapps/glide-data-grid";
